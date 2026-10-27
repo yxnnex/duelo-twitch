@@ -3,9 +3,9 @@ const tmi = require('tmi.js');
 
 const app = express();
 
-// CONFIGURACIÓN DE TU CUENTA Y CANAL
-const USERNAME = 's2yone';
-const OAUTH_TOKEN = 'oauth:19qzc73gb84s71f6lzl7cad82va82r';
+// CONFIGURACIÓN DE TU CUENTA BOT Y CANAL
+const USERNAME = 's2kyli';
+const OAUTH_TOKEN = 'oauth:6utee3wnxw971ag860bw2xuqpkto1i';
 const CHANNEL_NAME = 's2yone';
 
 // Conexión al chat de Twitch
@@ -46,7 +46,6 @@ app.get('/duelo', (req, res) => {
     client.say(CHANNEL_NAME, `GANADOR: ${ganador} doroBuff`);
   }, 15000);
 
-  // Le respondemos a Nightbot con un texto vacío para que no tire error ni imprima extras
   res.send(' ');
 });
 
