@@ -19,7 +19,7 @@ const client = new tmi.Client({
 client.connect().catch(console.error);
 
 // ==========================================
-// DETECTOR DE SALUDOS AUTOMÁTICO EN EL CHAT
+// DETECTOR DE SALUDOS Y PALABRAS EN EL CHAT
 // ==========================================
 client.on('message', (target, context, message, self) => {
   if (self) return;
@@ -30,6 +30,11 @@ client.on('message', (target, context, message, self) => {
   if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'holis') {
     const usuario = context['display-name'] || context.username;
     client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
+  }
+
+  // Si alguien escribe "dancer", el bot responde "dancer dancer"
+  if (text === 'dancer') {
+    client.say(target, 'dancer dancer');
   }
 });
 
@@ -89,7 +94,7 @@ app.get('/amor', (req, res) => {
     client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
     
     setTimeout(() => {
-      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% dancer`);
+      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% BearHug `);
     }, 3000);
   }
 
