@@ -6,7 +6,7 @@ const app = express();
 const USERNAME = 's2kyli';
 const OAUTH_TOKEN = 'oauth:6utee3wnxw971ag860bw2xuqpkto1i';
 
-// Conectamos el bot a ambos canales
+// Mantenemos la conexión abierta a los dos canales donde vas a usarlo
 const client = new tmi.Client({
   options: { debug: false },
   identity: {
@@ -22,8 +22,9 @@ app.get('/duelo', (req, res) => {
   const user = req.query.user || 'Alguien';
   const touser = req.query.touser || 'un rival';
   
-  // Detecta el canal al que debe responder (por defecto s2yone)
-  const channel = req.query.channel ? `#${req.query.channel}` : '#s2yone';
+  // Capturamos el canal que viene en la URL de Nightbot (por defecto s2yone)
+  const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
+  const channel = `#${targetChannel}`;
 
   const peleadores = [user, touser];
   const ganador = peleadores[Math.floor(Math.random() * peleadores.length)];
