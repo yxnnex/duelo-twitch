@@ -27,7 +27,7 @@ client.on('message', (target, context, message, self) => {
   const text = message.toLowerCase().trim();
 
   // Detecta saludos comunes y variaciones alargadas como "holaaaaaa"
-  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'hola' || text === 'holis') {
+  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'holis') {
     const usuario = context['display-name'] || context.username;
     client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
   }
@@ -48,7 +48,10 @@ client.on('message', (target, context, message, self) => {
 // ==========================================
 app.get('/duelo', (req, res) => {
   const user = req.query.user || 'Alguien';
-  const touser = req.query.touser || 'un rival';
+  let touser = req.query.touser;
+  if (!touser || touser.trim() === '' || touser === '$(touser)' || touser === '$(query)') {
+    touser = 'un rival misterioso';
+  }
   
   const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
   const channel = `#${targetChannel}`;
