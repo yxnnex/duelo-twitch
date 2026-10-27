@@ -30,7 +30,7 @@ app.get('/duelo', (req, res) => {
   const ganador = peleadores[Math.floor(Math.random() * peleadores.length)];
 
   // Mensaje 1 (Inmediato)
-  client.say(channel, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash.`);
+  client.say(channel, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash `);
 
   // Mensaje 2 (A los 5 segundos)
   setTimeout(() => {
@@ -39,12 +39,12 @@ app.get('/duelo', (req, res) => {
 
   // Mensaje 3 (A los 10 segundos)
   setTimeout(() => {
-    client.say(channel, `Se muerden, rasgunan y se pican los ojos el uno al otro catSlap.`);
+    client.say(channel, `Se muerden, rasgunan y se pican los ojos el uno al otro catSlap `);
   }, 10000);
 
   // Mensaje 4: Ganador (A los 15 segundos)
   setTimeout(() => {
-    client.say(channel, `GANADOR: ${ganador} dancer`);
+    client.say(channel, `GANADOR: ${ganador} dancer `);
   }, 15000);
 
   res.send(' ');
