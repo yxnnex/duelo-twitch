@@ -27,7 +27,7 @@ client.on('message', (target, context, message, self) => {
   const text = message.toLowerCase().trim();
 
   // Detecta saludos comunes y variaciones alargadas como "holaaaaaa"
-  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'holis') {
+  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'hola' ||text === 'holis') {
     const usuario = context['display-name'] || context.username;
     client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
   }
