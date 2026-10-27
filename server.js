@@ -26,7 +26,8 @@ client.on('message', (target, context, message, self) => {
 
   const text = message.toLowerCase().trim();
 
-  if (text === 'hola' || text === 'ola' || text === 'holi' || text === 'holis') {
+  // Detecta saludos comunes y variaciones alargadas como "holaaaaaa"
+  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'holis') {
     const usuario = context['display-name'] || context.username;
     client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
   }
@@ -88,7 +89,7 @@ app.get('/amor', (req, res) => {
     client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
     
     setTimeout(() => {
-      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% BearHug `);
+      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% dancer`);
     }, 3000);
   }
 
