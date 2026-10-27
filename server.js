@@ -88,7 +88,7 @@ app.get('/amor', (req, res) => {
     client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
     
     setTimeout(() => {
-      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% dancer`);
+      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% BearHug `);
     }, 3000);
   }
 
