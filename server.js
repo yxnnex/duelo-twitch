@@ -19,6 +19,20 @@ const client = new tmi.Client({
 client.connect().catch(console.error);
 
 // ==========================================
+// DETECTOR DE SALUDOS AUTOMÁTICO EN EL CHAT
+// ==========================================
+client.on('message', (target, context, message, self) => {
+  if (self) return;
+
+  const text = message.toLowerCase().trim();
+
+  if (text === 'hola' || text === 'ola' || text === 'holi' || text === 'holis') {
+    const usuario = context['display-name'] || context.username;
+    client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
+  }
+});
+
+// ==========================================
 // COMANDO 1: DUELO
 // ==========================================
 app.get('/duelo', (req, res) => {
