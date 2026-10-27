@@ -18,11 +18,13 @@ const client = new tmi.Client({
 
 client.connect().catch(console.error);
 
+// ==========================================
+// COMANDO 1: DUELO
+// ==========================================
 app.get('/duelo', (req, res) => {
   const user = req.query.user || 'Alguien';
   const touser = req.query.touser || 'un rival';
   
-  // Capturamos el canal que viene en la URL de Nightbot (por defecto s2yone)
   const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
   const channel = `#${targetChannel}`;
 
@@ -46,6 +48,35 @@ app.get('/duelo', (req, res) => {
   setTimeout(() => {
     client.say(channel, `GANADOR: ${ganador} dancer `);
   }, 15000);
+
+  res.send(' ');
+});
+
+// ==========================================
+// COMANDO 2: AMOR (CON REGLA ESPECIAL PARA VLADSUO)
+// ==========================================
+app.get('/amor', (req, res) => {
+  const user = req.query.user || 'Alguien';
+  const touser = req.query.touser || 'alguien';
+  
+  const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
+  const channel = `#${targetChannel}`;
+
+  // Mapeamos el nombre sin el '@' por si lo escriben con mención
+  const cleanedTouser = touser.replace('@', '').toLowerCase();
+
+  // Si etiquetan a vladsuo, responde con el mensaje especial
+  if (cleanedTouser === 'vladsuo') {
+    client.say(channel, `No voy a medir eso, ese hombre tiene dueño, intenta con otro catDespair`);
+  } else {
+    // Para cualquier otro usuario, calcula el porcentaje de amor
+    const porcentaje = Math.floor(Math.random() * 101);
+    client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
+    
+    setTimeout(() => {
+      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% dancer`);
+    }, 3000);
+  }
 
   res.send(' ');
 });
