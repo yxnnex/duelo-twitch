@@ -36,6 +36,11 @@ client.on('message', (target, context, message, self) => {
   if (text === 'dancer') {
     client.say(target, 'dancer dancer');
   }
+
+  // Si alguien escribe !lechazo dirigido a vladsuo
+  if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
+    client.say(target, 'Te voy a acusar con la jefecita');
+  }
 });
 
 // ==========================================
