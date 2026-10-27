@@ -27,7 +27,7 @@ client.on('message', (target, context, message, self) => {
   const text = message.toLowerCase().trim();
 
   // Detecta saludos comunes y variaciones alargadas como "holaaaaaa"
-  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'hola' ||text === 'holis') {
+  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'holis') {
     const usuario = context['display-name'] || context.username;
     client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
   }
@@ -78,7 +78,7 @@ app.get('/duelo', (req, res) => {
 });
 
 // ==========================================
-// COMANDO 2: AMOR (CON REGLA ESPECIAL PARA VLADSUO)
+// COMANDO 2: AMOR (CON REGLAS ESPECIALES)
 // ==========================================
 app.get('/amor', (req, res) => {
   const user = req.query.user || 'Alguien';
@@ -87,14 +87,20 @@ app.get('/amor', (req, res) => {
   const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
   const channel = `#${targetChannel}`;
 
-  // Mapeamos el nombre sin el '@' por si lo escriben con mención
+  // Mapeamos los nombres sin el '@' y en minúsculas para comparar bien
+  const cleanedUser = user.replace('@', '').toLowerCase();
   const cleanedTouser = touser.replace('@', '').toLowerCase();
 
-  // Si etiquetan a vladsuo, responde con el mensaje especial
-  if (cleanedTouser === 'vladsuo') {
+  // Regla 1: Si están en el canal s2yone y aparece s2yone en el cálculo de amor
+  if (targetChannel === 's2yone' && (cleanedUser === 's2yone' || cleanedTouser === 's2yone')) {
+    client.say(channel, `Le voy a decir a mi papá`);
+  } 
+  // Regla 2: Si etiquetan a vladsuo en cualquier canal
+  else if (cleanedTouser === 'vladsuo') {
     client.say(channel, `No voy a medir eso, ese hombre tiene dueño, intenta con otro catDespair`);
-  } else {
-    // Para cualquier otro usuario, calcula el porcentaje de amor
+  } 
+  // Regla 3: Comportamiento normal para cualquier otro caso
+  else {
     const porcentaje = Math.floor(Math.random() * 101);
     client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
     
