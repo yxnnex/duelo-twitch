@@ -41,6 +41,11 @@ client.on('message', (target, context, message, self) => {
   if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
     client.say(target, 'Te voy a acusar con la jefecita');
   }
+
+  // Si VladSuo escribe !garche en su propio canal
+  if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
+    client.say(target, '@vladsuo ojito ehhhh');
+  }
 });
 
 // ==========================================
