@@ -18,6 +18,9 @@ const client = new tmi.Client({
 
 client.connect().catch(console.error);
 
+// Variable para recordar a quién fue el último usuario que saludó el bot
+let ultimoUsuarioSaludado = null;
+
 // ==========================================
 // DETECTOR DE SALUDOS Y PALABRAS EN EL CHAT
 // ==========================================
@@ -33,6 +36,14 @@ client.on('message', (target, context, message, self) => {
   // Detecta cuando alguien saluda (hola, ola, holis, olis, :3, unu, etc.)
   if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
     
+    // Si la misma persona que acaba de ser saludada vuelve a saludar, ignoramos para evitar spam
+    if (usuario === ultimoUsuarioSaludado) {
+      return;
+    }
+
+    // Guardamos a este usuario como el último saludado
+    ultimoUsuarioSaludado = usuario;
+
     // Lista de respuestas variadas que el bot dirá al azar
     const respuestasBot = [
       `¡Holaaaa @${usuario} ! dancer`,
