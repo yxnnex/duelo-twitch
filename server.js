@@ -79,7 +79,7 @@ app.get('/duelo', (req, res) => {
 
   // Mensaje 4: Ganador (A los 15 segundos)
   setTimeout(() => {
-    client.say(channel, `GANADOR: 🏆 ${ganador} dancer `);
+    client.say(channel, `GANADOR:  ${ganador} dancer `);
   }, 15000);
 
   res.send(' ');
