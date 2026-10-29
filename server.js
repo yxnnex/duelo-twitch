@@ -25,32 +25,43 @@ client.on('message', (target, context, message, self) => {
   if (self) return;
 
   const text = message.toLowerCase().trim();
+  const usuario = context['display-name'] || context.username;
 
-  // Detecta saludos comunes y variaciones alargadas como "holaaaaaa"
-  if (/^hola+$/.test(text) || text === 'ola' || text === 'holi' || text === 'holis') {
-    const usuario = context['display-name'] || context.username;
-    client.say(target, `¡Holaaaa @${usuario}, qué tal! dancer`);
+  // Detecta cuando alguien saluda (hola, ola, holis, olis, :3, unu, etc.)
+  if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
+    
+    // Lista de respuestas variadas que el bot dirá al azar
+    const respuestasBot = [
+      `¡Holaaaa @${usuario} ! dancer`,
+      `¡Holi @${usuario}! :3`,
+      `¡Holaa @${usuario}, un gusto verte por acá unu`,
+      `¡Olis @${usuario}! ❤️`,
+      `¡Hola @${usuario}! :3 ¿todo bien?`,
+      `¡Holiwis @${usuario}! unu`
+    ];
+
+    const respuestaElegida = respuestasBot[Math.floor(Math.random() * respuestasBot.length)];
+    client.say(target, respuestaElegida);
   }
 
   // Si alguien escribe "dancer", el bot responde "dancer dancer"
   if (text === 'dancer') {
-    client.say(target, 'dancer dancer dancer dancer');
+    client.say(target, 'dancer dancer');
   }
 
   // Si alguien escribe !lechazo dirigido a vladsuo
   if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
-    client.say(target, 'mira @s2yone!!');
+    client.say(target, 'Te voy a acusar con la jefecita');
   }
 
   // Si VladSuo escribe !garche en su propio canal
   if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
     const respuestasGarche = [
-      '@vladsuo ojito ehhhh ayoCR7 ',
-      '@vladsuo holasinofender ',
-      '@vladsuo lurk q ta chendo?',
-      '@vladsuo Apa la papaaaaa! LOL',
+      '@vladsuo ojito ehhhh',
+      '@vladsuo qué pasa papi, mami no te atiende bien?',
+      '@vladsuo ¿cómo andamos ehh?',
+      '@vladsuo ¡Apa la papaaaaa!',
       '@vladsuo y así te quería atrapar con los dedos en la masa'
-      '@vladsuo soy kylian dictadoooorrrr aaa'
     ];
     const respuestaAleatoria = respuestasGarche[Math.floor(Math.random() * respuestasGarche.length)];
     client.say(target, respuestaAleatoria);
