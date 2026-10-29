@@ -27,7 +27,7 @@ let ultimoUsuarioSaludado = null;
 client.on('message', (target, context, message, self) => {
   if (self) return;
 
-  // Ignoramos los mensajes de Nightbot para que el bot no le responda
+  // Ignoramos los mensajes de Nightbot o whispers
   if (context.username === 'nightbot' || context['message-type'] === 'whisper') return;
 
   const text = message.toLowerCase().trim();
@@ -36,6 +36,17 @@ client.on('message', (target, context, message, self) => {
   // Detecta cuando alguien saluda (hola, ola, holis, olis, :3, unu, etc.)
   if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
     
+    // Si el mensaje tiene una mención (@) o nombra a alguien más, asumimos que se saludan entre users y no nos metemos
+    if (text.includes('@') || context['message-id'] && message.includes(' ')) {
+      // O si el mensaje es largo con espacios nombrando a otro, lo ignoramos
+    }
+    
+    // Filtro adicional: Si el mensaje contiene un espacio seguido de texto (ej: "hola dardo"), no es un saludo general
+    const palabras = text.split(' ');
+    if (palabras.length > 2) {
+      return; // Es una charla entre usuarios o va dirigido a alguien
+    }
+
     // Si la misma persona que acaba de ser saludada vuelve a saludar, ignoramos para evitar spam
     if (usuario === ultimoUsuarioSaludado) {
       return;
