@@ -18,8 +18,9 @@ const client = new tmi.Client({
 
 client.connect().catch(console.error);
 
-// Variable para recordar a quién fue el último usuario que saludó el bot
-let ultimoUsuarioSaludado = null;
+// Memoria para guardar la última vez que se saludó a cada usuario (Cooldown de 3 horas)
+const usuariosSaludados = new Map();
+const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000; // 3 horas en milisegundos
 
 // ==========================================
 // DETECTOR DE SALUDOS Y PALABRAS EN EL CHAT
@@ -36,24 +37,22 @@ client.on('message', (target, context, message, self) => {
   // Detecta cuando alguien saluda (hola, ola, holis, olis, :3, unu, etc.)
   if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
     
-    // Si el mensaje tiene una mención (@) o nombra a alguien más, asumimos que se saludan entre users y no nos metemos
-    if (text.includes('@') || context['message-id'] && message.includes(' ')) {
-      // O si el mensaje es largo con espacios nombrando a otro, lo ignoramos
-    }
-    
-    // Filtro adicional: Si el mensaje contiene un espacio seguido de texto (ej: "hola dardo"), no es un saludo general
+    // Si el mensaje tiene espacios largos o nombra a alguien, es una charla entre users y no nos metemos
     const palabras = text.split(' ');
-    if (palabras.length > 2) {
-      return; // Es una charla entre usuarios o va dirigido a alguien
-    }
-
-    // Si la misma persona que acaba de ser saludada vuelve a saludar, ignoramos para evitar spam
-    if (usuario === ultimoUsuarioSaludado) {
+    if (palabras.length > 2 || text.includes('@')) {
       return;
     }
 
-    // Guardamos a este usuario como el último saludado
-    ultimoUsuarioSaludado = usuario;
+    const ahora = Date.now();
+    const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
+
+    // Si todavía no pasaron 3 horas desde su último saludo, el bot lo ignora por completo
+    if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
+      return;
+    }
+
+    // Guardamos el momento exacto de este saludo
+    usuariosSaludados.set(usuario, ahora);
 
     // Lista de respuestas variadas que el bot dirá al azar
     const respuestasBot = [
