@@ -57,7 +57,7 @@ client.on('message', (target, context, message, self) => {
   // Si VladSuo escribe !garche en su propio canal
   if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
     const respuestasGarche = [
-      '@vladsuo ojito ehhhh',
+      '@vladsuo eh :3 ',
       '@vladsuo qué pasa papi, mami no te atiende bien?',
       '@vladsuo ¿cómo andamos ehh?',
       '@vladsuo ¡Apa la papaaaaa!',
