@@ -24,6 +24,9 @@ client.connect().catch(console.error);
 client.on('message', (target, context, message, self) => {
   if (self) return;
 
+  // Ignoramos los mensajes de Nightbot para que el bot no le responda
+  if (context.username === 'nightbot' || context['message-type'] === 'whisper') return;
+
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
 
