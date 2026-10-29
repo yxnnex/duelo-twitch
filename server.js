@@ -39,12 +39,21 @@ client.on('message', (target, context, message, self) => {
 
   // Si alguien escribe !lechazo dirigido a vladsuo
   if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
-    client.say(target, 'Te voy a acusar con la jefecita');
+    client.say(target, 'mira @s2yone!!');
   }
 
   // Si VladSuo escribe !garche en su propio canal
   if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
-    client.say(target, '@vladsuo ojito ehhhh');
+    const respuestasGarche = [
+      '@vladsuo ojito ehhhh',
+      '@vladsuo qué pasa papi, mami no te atiende bien?',
+      '@vladsuo ¿cómo andamos ehh?',
+      '@vladsuo ¡Apa la papaaaaa!',
+      '@vladsuo y así te quería atrapar con los dedos en la masa'
+      '@vladsuo soy kylian dictadoooorrrr aaa'
+    ];
+    const respuestaAleatoria = respuestasGarche[Math.floor(Math.random() * respuestasGarche.length)];
+    client.say(target, respuestaAleatoria);
   }
 });
 
@@ -74,12 +83,12 @@ app.get('/duelo', (req, res) => {
 
   // Mensaje 3 (A los 10 segundos)
   setTimeout(() => {
-    client.say(channel, `Se muerden, rasguñan y se pican los ojos el uno al otro catSlap `);
+    client.say(channel, `Se muerden, rasgunan y se pican los ojos el uno al otro catSlap `);
   }, 10000);
 
   // Mensaje 4: Ganador (A los 15 segundos)
   setTimeout(() => {
-    client.say(channel, `GANADOR:  ${ganador} dancer `);
+    client.say(channel, `GANADOR: ${ganador} dancer `);
   }, 15000);
 
   res.send(' ');
