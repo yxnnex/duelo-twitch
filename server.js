@@ -83,7 +83,7 @@ client.on('message', (target, context, message, self) => {
     const respuestasGarche = [
       '@vladsuo eh :3 ',
       '@vladsuo? ayoCR7 ',
-      '@vladsuo ¿BOEE ',
+      '@vladsuo BOEE ',
       '@vladsuo ¡Apa la papaaaaa!',
       '@vladsuo y así te quería atrapar GatoCuliao'
     ];
