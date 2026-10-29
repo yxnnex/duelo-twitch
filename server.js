@@ -34,7 +34,7 @@ client.on('message', (target, context, message, self) => {
 
   // Si alguien escribe "dancer", el bot responde "dancer dancer"
   if (text === 'dancer') {
-    client.say(target, 'dancer dancer');
+    client.say(target, 'dancer dancer dancer dancer');
   }
 
   // Si alguien escribe !lechazo dirigido a vladsuo
@@ -45,10 +45,10 @@ client.on('message', (target, context, message, self) => {
   // Si VladSuo escribe !garche en su propio canal
   if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
     const respuestasGarche = [
-      '@vladsuo ojito ehhhh',
-      '@vladsuo qué pasa papi, mami no te atiende bien?',
-      '@vladsuo ¿cómo andamos ehh?',
-      '@vladsuo ¡Apa la papaaaaa!',
+      '@vladsuo ojito ehhhh ayoCR7 ',
+      '@vladsuo holasinofender ',
+      '@vladsuo lurk q ta chendo?',
+      '@vladsuo Apa la papaaaaa! LOL',
       '@vladsuo y así te quería atrapar con los dedos en la masa'
       '@vladsuo soy kylian dictadoooorrrr aaa'
     ];
