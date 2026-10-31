@@ -36,11 +36,11 @@ let preguntasUsadas = [];
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
-  { pregunta: '🎮 ¿Cuál es el nombre del hermano  Yone?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone?', respuestas: ['yasuo'] },
   { pregunta: '🎮 ¿En qué región nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
-  { pregunta: '🎮 ¿Cómo se llama el osito de  Annie?', respuestas: ['tibbers'] },
+  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
   { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },
   { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },
@@ -130,7 +130,15 @@ client.on('message', (target, context, message, self) => {
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
   // ==========================================
-  // 1. REACCIÓN EN CADENA: SI LE RESPONDEN AL BOTEO PREVIO
+  // 1. REGLA ESPECIAL PARA S2YONE ("CHAU BB")
+  // ==========================================
+  if (usernameLower === 's2yone' && text.includes('chau bb')) {
+    client.say(target, `@${usuario} adios, buenas noches eres lo mejor tkm (eso deberia decirte @vladsuo)`);
+    return;
+  }
+
+  // ==========================================
+  // 2. REACCIÓN EN CADENA: SI LE RESPONDEN AL BOTEO PREVIO
   // ==========================================
   if (usernameLower === ultimoBardeado) {
     ultimoBardeado = null; 
@@ -139,7 +147,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 2. REGLA ESPECIAL PARA ELIANHDC
+  // 3. REGLA ESPECIAL PARA ELIANHDC
   // ==========================================
   if (usernameLower === 'elianhdc') {
     if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text.includes('hola')) {
@@ -150,7 +158,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 3. REGLA ESPECIAL PARA TOMADAA
+  // 4. REGLA ESPECIAL PARA TOMADAA
   // ==========================================
   if (usernameLower === 'tomadaa') {
     ultimoBardeado = 'tomadaa';
@@ -159,14 +167,14 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 4. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
+  // 5. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
   // ==========================================
   if (triviaActiva) {
     const acerto = respuestasValidasActuales.some(resp => text.includes(resp));
     if (acerto) {
       triviaActiva = false;
       clearTimeout(temporizadorTrivia);
-      client.say(target, ` ¡Correcto @${usuario}! Acertaste la respuesta   dancer`);
+      client.say(target, `🎉 ¡Correcto @${usuario}! Acertaste la respuesta y ganaste la ronda de trivia 🏆 dancer`);
       return;
     }
   }
@@ -174,7 +182,7 @@ client.on('message', (target, context, message, self) => {
   // Comando para lanzar una trivia nueva
   if (text === '!trivia') {
     if (triviaActiva) {
-      client.say(target, ` ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash`);
+      client.say(target, `⚠️ ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash`);
       return;
     }
 
@@ -192,12 +200,12 @@ client.on('message', (target, context, message, self) => {
     respuestasValidasActuales = Array.isArray(preguntaObj.respuestas) ? preguntaObj.respuestas : [preguntaObj.respuestas];
     triviaActiva = true;
 
-    client.say(target, `🧠*[TRIVIA]: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
+    client.say(target, `🧠 **[TRIVIA]**: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
 
     temporizadorTrivia = setTimeout(() => {
       if (triviaActiva) {
         triviaActiva = false;
-        client.say(target, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
+        client.say(target, `⏳ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
       }
     }, 30000);
 
