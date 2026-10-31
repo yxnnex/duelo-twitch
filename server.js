@@ -1,5 +1,5 @@
 const express = require('express');
-const https = https = require('https');
+const https = require('https');
 const tmi = require('tmi.js');
 
 const app = express();
@@ -23,6 +23,9 @@ client.connect().catch(console.error);
 const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
+// Memoria para registrar a quién bardeó el bot recién y esperar su respuesta
+let ultimoBardeado = null;
+
 // ==========================================
 // ESTADO DE LA TRIVIA DINÁMICA (BANCO EN ESPAÑOL Y FLEXIBLE)
 // ==========================================
@@ -33,16 +36,16 @@ let preguntasUsadas = [];
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
-  { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuestas: ['yasuo'] },
-  { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano  Yone?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿En qué región nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
-  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
+  { pregunta: '🎮 ¿Cómo se llama el osito de  Annie?', respuestas: ['tibbers'] },
   { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },
   { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },
   { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja o asistencia?', respuestas: ['voracidad'] },
-  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas en la bot lane?', respuestas: ['thresh'] },
+  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el dragón elemental que otorga velocidad de movimiento fuera de combate?', respuestas: ['dragon de nubes', 'nubes', 'viento', 'aire', 'dragon de viento'] },
   { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuestas: ['tirador', 'adc'] },
   { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },
@@ -127,30 +130,43 @@ client.on('message', (target, context, message, self) => {
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
   // ==========================================
-  // 1. REGLA ESPECIAL PARA ELIANHDC (CUANDO DICE HOLA)
+  // 1. REACCIÓN EN CADENA: SI LE RESPONDEN AL BOTEO PREVIO
   // ==========================================
-  if (usernameLower === 'elianhdc' && (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text.includes('hola'))) {
-    client.say(target, `Uuh ya vino este pelotudo`);
+  if (usernameLower === ultimoBardeado) {
+    ultimoBardeado = null; 
+    client.say(target, `@${usuario} La diferencia entre vos y yo es que vos te gastás en responderme y yo estoy programado para ignorarte. Seguí repitiendo como un BOT, dale, seguí.`);
     return;
   }
 
   // ==========================================
-  // 2. REGLA ESPECIAL PARA TOMADAA
+  // 2. REGLA ESPECIAL PARA ELIANHDC
+  // ==========================================
+  if (usernameLower === 'elianhdc') {
+    if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text.includes('hola')) {
+      ultimoBardeado = 'elianhdc';
+      client.say(target, `Uuh ya vino este pelotudo`);
+      return;
+    }
+  }
+
+  // ==========================================
+  // 3. REGLA ESPECIAL PARA TOMADAA
   // ==========================================
   if (usernameLower === 'tomadaa') {
+    ultimoBardeado = 'tomadaa';
     client.say(target, `Tomátela pelotudo`);
     return;
   }
 
   // ==========================================
-  // 3. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
+  // 4. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
   // ==========================================
   if (triviaActiva) {
     const acerto = respuestasValidasActuales.some(resp => text.includes(resp));
     if (acerto) {
       triviaActiva = false;
       clearTimeout(temporizadorTrivia);
-      client.say(target, `🎉 ¡Correcto @${usuario}! Acertaste la respuesta y ganaste la ronda de trivia 🏆 dancer`);
+      client.say(target, ` ¡Correcto @${usuario}! Acertaste la respuesta   dancer`);
       return;
     }
   }
@@ -158,7 +174,7 @@ client.on('message', (target, context, message, self) => {
   // Comando para lanzar una trivia nueva
   if (text === '!trivia') {
     if (triviaActiva) {
-      client.say(target, `⚠️ ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash`);
+      client.say(target, ` ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash`);
       return;
     }
 
@@ -176,12 +192,12 @@ client.on('message', (target, context, message, self) => {
     respuestasValidasActuales = Array.isArray(preguntaObj.respuestas) ? preguntaObj.respuestas : [preguntaObj.respuestas];
     triviaActiva = true;
 
-    client.say(target, `🧠 **[TRIVIA]**: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
+    client.say(target, `🧠*[TRIVIA]: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
 
     temporizadorTrivia = setTimeout(() => {
       if (triviaActiva) {
         triviaActiva = false;
-        client.say(target, `⏳ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
+        client.say(target, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
       }
     }, 30000);
 
