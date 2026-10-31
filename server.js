@@ -38,19 +38,21 @@ let preguntasUsadas = [];
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
   { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone?', respuestas: ['yasuo'] },
-  { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
   { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
-  { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },
   { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },
-  { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja o asistencia?', respuestas: ['voracidad'] },
   { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas?', respuestas: ['thresh'] },
-  { pregunta: '🎮 ¿Cómo se llama el dragón elemental que otorga velocidad de movimiento fuera de combate?', respuestas: ['dragon de nubes', 'nubes', 'viento', 'aire', 'dragon de viento'] },
-  { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuestas: ['tirador', 'adc'] },
   { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },
-
+  { pregunta: '🎮 ¿Cuál es el nombre del campeón dragón creador de estrellas en el LoL?', respuestas: ['aurelion sol', 'aurelion'] },
+  { pregunta: '🎮 ¿Cómo se llama el reino o ciudad flotante y futurista de Runaterra (contraparte de Zaun)?', respuestas: ['piltover'] },
+  { pregunta: '🎮 ¿Qué campeón utiliza una linterna y junta almas de enemigos caídos?', respuestas: ['thresh'] },
+  { pregunta: '🎮 ¿Cómo se llama la habilidad definitiva (R) de Yone?', respuestas: ['sello del destino', 'sello de destino'] },
+  { pregunta: '🎮 ¿Qué campeón de LoL es un demonio del miedo y usa guadaña?', respuestas: ['fiddlesticks'] },
+  { pregunta: '🎮 ¿Cómo se llama el mapa clásico donde se juegan las partidas 5v5 tradicionales de LoL?', respuestas: ['grieta del invocador', 'la grieta del invocador', 'grieta'] },
+  { pregunta: '🎮 ¿Qué campeón tirador (ADC) tiene como arma una escopeta de cuatro cañones llamada "Sussurro"?', respuestas: ['jhin'] },
+  { pregunta: '🎮 ¿Cómo se llama el monstruo neutral que aparece en el foso antes del Barón Nashor?', respuestas: ['heraldo', 'heraldo de la grieta', 'larva', 'vacuo'] },
   // --- FÚTBOL ---
   { pregunta: '⚽ ¿Cuántos Balones de Oro ganó Cristiano Ronaldo?', respuestas: ['5', 'cinco'] },
   { pregunta: '⚽ ¿Qué selección ganó la Copa del Mundo Qatar 2022?', respuestas: ['argentina', 'la scaloneta', 'albiceleste'] },
@@ -61,6 +63,14 @@ const bancoPreguntas = [
   { pregunta: '⚽ ¿En qué estadio juega de local la Selección Argentina?', respuestas: ['monumental', 'mas monumental', 'el monumental'] },
   { pregunta: '⚽ ¿Qué dorsal (número de camiseta) caracteriza históricamente a Cristiano Ronaldo?', respuestas: ['7', 'siete'] },
   { pregunta: '⚽ ¿Qué apodo recibe Kylian Mbappé por su velocidad en la cancha?', respuestas: ['tortuga', 'donatello'] },
+  { pregunta: '⚽ ¿Qué selección ganó la Copa América 2021 jugada en Brasil?', respuestas: ['argentina', 'la scaloneta', 'albiceleste'] },
+  { pregunta: '⚽ ¿En qué club de la Premier League inglesa juega actualmente Erling Haaland?', respuestas: ['manchester city', 'city'] },
+  { pregunta: '⚽ ¿Quién fue el director técnico de la Selección Argentina en la Copa del Mundo 2022?', respuestas: ['scaloni', 'lionel scaloni'] },
+  { pregunta: '⚽ ¿En qué país nació el futbolista Neymar Jr.?', respuestas: ['brasil'] },
+  { pregunta: '⚽ ¿Cómo se llama el famoso estadio de Boca Juniors?', respuestas: ['la bombonera', 'bombonera'] },
+  { pregunta: '⚽ ¿Qué club europeo ha ganado más títulos de UEFA Champions League en la historia?', respuestas: ['real madrid', 'madrid'] },
+  { pregunta: '⚽ ¿En qué club de Francia jugó Lionel Messi antes de ir al Inter Miami?', respuestas: ['psg', 'paris saint germain', 'paris saint-germain'] },
+  { pregunta: '⚽ ¿Cómo se llama la jugada de fútbol donde un jugador pasa la pelota por entre las piernas del rival?', respuestas: ['cano', 'caño', 'tunel'] },
   { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] }
 ];
 
