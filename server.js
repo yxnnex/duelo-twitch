@@ -1,5 +1,5 @@
 const express = require('express');
-const https = require('https');
+const https = https = require('https');
 const tmi = require('tmi.js');
 
 const app = express();
@@ -33,7 +33,7 @@ let preguntasUsadas = [];
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
-  { pregunta: '🎮 ¿Cuál es el nombre de Yone en el LoL?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuestas: ['yasuo'] },
   { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
@@ -116,11 +116,13 @@ function buscarNoticiaFutbol(query, callback) {
 client.on('message', (target, context, message, self) => {
   if (self) return;
 
-  if (context.username === 'nightbot' || context['message-type'] === 'whisper') return;
+  const usernameLower = context.username.toLowerCase();
+
+  // IGNORAR BOTS (StreamElements, Nightbot, etc.)
+  if (usernameLower === 'streamelements' || usernameLower === 'nightbot' || context['message-type'] === 'whisper') return;
 
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
-  const usernameLower = context.username.toLowerCase();
 
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
@@ -133,7 +135,15 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 2. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
+  // 2. REGLA ESPECIAL PARA TOMADAA
+  // ==========================================
+  if (usernameLower === 'tomadaa') {
+    client.say(target, `Tomátela pelotudo`);
+    return;
+  }
+
+  // ==========================================
+  // 3. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
   // ==========================================
   if (triviaActiva) {
     const acerto = respuestasValidasActuales.some(resp => text.includes(resp));
@@ -231,16 +241,14 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // COMANDOS DE FÚTBOL (SOLO COMANDOS EXACTOS PARA EVITAR FALSOS POSITIVOS)
+  // COMANDOS DE FÚTBOL
   // ==========================================
 
-  // Respuesta picante para MESSI
   if (text === '!messi' || text.startsWith('messi ') || text === 'messi') {
     client.say(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
     return;
   }
 
-  // Comando exacto para CR7
   if (text === '!cr7') {
     buscarNoticiaFutbol('Cristiano Ronaldo', (titular) => {
       if (titular) {
@@ -252,7 +260,6 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Comando exacto para Mbappé
   if (text === '!mbappe' || text === '!mbappé') {
     buscarNoticiaFutbol('Kylian Mbappe', (titular) => {
       if (titular) {
@@ -264,7 +271,6 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Comando general de Noticias de Fútbol
   if (text === '!noticias') {
     buscarNoticiaFutbol('Cristiano Ronaldo Kylian Mbappe', (titular) => {
       if (titular) {
