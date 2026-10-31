@@ -24,12 +24,18 @@ const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
-// FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
+// FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS CORREGIDO CON USER-AGENT)
 // ==========================================
 function buscarNoticiaFutbol(query, callback) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es&gl=AR&ceid=AR:es`;
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es-419&gl=AR&ceid=AR:es-419`;
 
-  https.get(url, (res) => {
+  const options = {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+  };
+
+  https.get(url, options, (res) => {
     let xmlData = '';
     res.on('data', (chunk) => { xmlData += chunk; });
     res.on('end', () => {
@@ -40,9 +46,15 @@ function buscarNoticiaFutbol(query, callback) {
             .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
             .replace(/&amp;/g, '&')
             .replace(/&#39;/g, "'")
-            .replace(/&quot;/g, '"');
+            .replace(/&quot;/g, '"')
+            .trim();
           
-          titular = titular.split(' - ')[0];
+          const partes = titular.split(' - ');
+          if (partes.length > 1) {
+            partes.pop();
+            titular = partes.join(' - ');
+          }
+
           callback(titular);
         } else {
           callback(null);
@@ -51,7 +63,8 @@ function buscarNoticiaFutbol(query, callback) {
         callback(null);
       }
     });
-  }).on('error', () => {
+  }).on('error', (err) => {
+    console.error('Error RSS:', err.message);
     callback(null);
   });
 }
@@ -131,7 +144,7 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Comandos / menciones de Cristiano Ronaldo (CR7) - Noticias reales optimizadas
+  // Comandos / menciones de Cristiano Ronaldo (CR7) - Noticias reales
   if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
     buscarNoticiaFutbol('Cristiano Ronaldo', (titular) => {
       if (titular) {
@@ -143,7 +156,7 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Comandos / menciones de Kylian Mbappé - Noticias reales optimizadas
+  // Comandos / menciones de Kylian Mbappé - Noticias reales
   if (text === '!mbappe' || text.includes('mbappe') || text.includes('mbappé')) {
     buscarNoticiaFutbol('Kylian Mbappe', (titular) => {
       if (titular) {
