@@ -236,9 +236,9 @@ client.on('message', (target, context, message, self) => {
   if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
     buscarNoticiaFutbol('Cristiano Ronaldo', (titular) => {
       if (titular) {
-        client.say(target, `🐐 @${usuario} **[CR7]**: ${titular} 🇵🇹`);
+        client.say(target, `🐐 @${usuario} [CR7]: ${titular} 🇵🇹`);
       } else {
-        client.say(target, `🐐 @${usuario} **[CR7]**: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
+        client.say(target, `🐐 @${usuario} [CR7]: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
       }
     });
     return;
