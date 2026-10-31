@@ -23,8 +23,9 @@ client.connect().catch(console.error);
 const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
-// Memoria para registrar a quién bardeó el bot recién y esperar su respuesta
-let ultimoBardeado = null;
+// Memoria para el flujo de bardo (0 = normal, 1 = advertido, 2 = bloqueado permanente)
+let estadoElian = 0;
+let estadoTomada = 0;
 
 // ==========================================
 // ESTADO DE LA TRIVIA DINÁMICA (BANCO EN ESPAÑOL Y FLEXIBLE)
@@ -37,7 +38,7 @@ let preguntasUsadas = [];
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
   { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone?', respuestas: ['yasuo'] },
-  { pregunta: '🎮 ¿En qué región nació Ahri?', respuestas: ['jonia', 'ionia'] },
+  { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
   { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
@@ -138,36 +139,59 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 2. REACCIÓN EN CADENA: SI LE RESPONDEN AL BOTEO PREVIO
-  // ==========================================
-  if (usernameLower === ultimoBardeado) {
-    ultimoBardeado = null; 
-    client.say(target, `@${usuario} La diferencia entre vos y yo es que vos te gastás en responderme y yo estoy programado para ignorarte. Seguí repitiendo como un BOT, dale, seguí.`);
-    return;
-  }
-
-  // ==========================================
-  // 3. REGLA ESPECIAL PARA ELIANHDC
+  // 2. LÓGICA ESPECIAL PARA ELIANHDC (PROGRESIVA Y BLOQUEO)
   // ==========================================
   if (usernameLower === 'elianhdc') {
-    if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text.includes('hola')) {
-      ultimoBardeado = 'elianhdc';
-      client.say(target, `Uuh ya vino este pelotudo`);
+    if (estadoElian === 2) {
+      if (text.startsWith('!duelo')) {
+        client.say(target, `@${usuario} No. Directamente perdiste.`);
+        return;
+      }
+      return; 
+    }
+
+    if (estadoElian === 1) {
+      estadoElian = 2; 
+      client.say(target, `@${usuario} La diferencia entre vos y yo es que vos te gastás en bardearme y yo estoy programado para ignorarte..`);
+      return;
+    }
+
+    const esBardeo = text.includes('callate') || text.includes('bot') || text.includes('manco') || text.includes('cerra el orto kyli') || text.includes('pelotudo') || text.includes('estupido');
+    if (esBardeo) {
+      estadoElian = 1; 
+      client.say(target, `Uuh ya vino este p..`);
       return;
     }
   }
 
   // ==========================================
-  // 4. REGLA ESPECIAL PARA TOMADAA
+  // 3. LÓGICA ESPECIAL PARA TOMADAA (IDÉNTICA A ELIAN)
   // ==========================================
   if (usernameLower === 'tomadaa') {
-    ultimoBardeado = 'tomadaa';
-    client.say(target, `Tomátela pelotudo`);
-    return;
+    if (estadoTomada === 2) {
+      if (text.startsWith('!duelo')) {
+        client.say(target, `@${usuario} No. Directamente perdiste.`);
+        return;
+      }
+      return;
+    }
+
+    if (estadoTomada === 1) {
+      estadoTomada = 2;
+      client.say(target, `@${usuario} La diferencia entre vos y yo es que vos te gastás en bardearme y yo estoy programado para ignorarte. Seguí respondiendome como un BOT, dale, seguí.`);
+      return;
+    }
+
+    const esBardeo = text.includes('callate') || text.includes('bot') || text.includes('cerra el orto kyli') || text.includes('basura') || text.includes('pelotudo') || text.includes('estupido') || text.includes('hijo d puta');
+    if (esBardeo) {
+      estadoTomada = 1;
+      client.say(target, `Tomátela, uno es amable y aparece este "mod" dando el ejemplo de como NO hay q ser`);
+      return;
+    }
   }
 
   // ==========================================
-  // 5. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
+  // 4. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
   // ==========================================
   if (triviaActiva) {
     const acerto = respuestasValidasActuales.some(resp => text.includes(resp));
@@ -307,10 +331,11 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // DETECTOR DE SALUDOS EN EL CHAT (RESTO DE USUARIOS)
+  // DETECTOR DE SALUDOS (ESTRICTO: SOLO SALUDOS PUROS)
   // ==========================================
-  if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
-    
+  const esSaludoPuro = /^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu';
+
+  if (esSaludoPuro) {
     const palabras = text.split(' ');
     if (palabras.length > 2 || text.includes('@')) {
       return;
@@ -351,8 +376,8 @@ client.on('message', (target, context, message, self) => {
       '@vladsuo eh :3 ',
       '@vladsuo? ayoCR7 ',
       '@vladsuo BOEE ',
-      '@vladsuo ¡Apa la papaaaaa!',
-      '@vladsuo y así te quería atrapar GatoCuliao'
+      '@vladsuo GatoCuliao',
+      '@vladsuo así te quería atrapar GatoCuliao'
     ];
     const respuestaAleatoria = respuestasGarche[Math.floor(Math.random() * respuestasGarche.length)];
     client.say(target, respuestaAleatoria);
