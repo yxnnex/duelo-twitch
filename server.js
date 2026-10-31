@@ -198,7 +198,7 @@ client.on('message', (target, context, message, self) => {
     if (acerto) {
       triviaActiva = false;
       clearTimeout(temporizadorTrivia);
-      client.say(target, `🎉 ¡Correcto @${usuario}! Acertaste la respuesta y ganaste la ronda de trivia 🏆 dancer`);
+      client.say(target, ` ¡Correcto @${usuario}! Acertaste la respuesta  dancer`);
       return;
     }
   }
@@ -229,7 +229,7 @@ client.on('message', (target, context, message, self) => {
     temporizadorTrivia = setTimeout(() => {
       if (triviaActiva) {
         triviaActiva = false;
-        client.say(target, `⏳ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
+        client.say(target, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
       }
     }, 30000);
 
