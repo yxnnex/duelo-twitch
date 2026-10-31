@@ -7,7 +7,7 @@ const app = express();
 const USERNAME = 's2kyli';
 const OAUTH_TOKEN = 'oauth:6utee3wnxw971ag860bw2xuqpkto1i';
 
-// Mantenemos la conexión abierta a los dos canales donde vas a usarlo
+// Conexión a los dos canales
 const client = new tmi.Client({
   options: { debug: false },
   identity: {
@@ -19,23 +19,21 @@ const client = new tmi.Client({
 
 client.connect().catch(console.error);
 
-// Memoria para guardar la última vez que se saludó a cada usuario (Cooldown de 3 horas)
+// Memoria de cooldown (3 horas por usuario para saludos)
 const usuariosSaludados = new Map();
-const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000; // 3 horas en milisegundos
+const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
-// DETECTOR DE SALUDOS Y PALABRAS EN EL CHAT
+// DETECTOR DE MENSAJES Y PALABRAS EN EL CHAT
 // ==========================================
 client.on('message', (target, context, message, self) => {
   if (self) return;
 
-  // Ignoramos los mensajes de Nightbot o whispers
   if (context.username === 'nightbot' || context['message-type'] === 'whisper') return;
 
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
 
-  // Imprimimos en la consola de Render lo que lee el bot para que puedas debuguear si falla
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
   // ==========================================
@@ -89,10 +87,56 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Detecta cuando alguien saluda (hola, ola, holis, olis, :3, unu, etc.)
+  // ==========================================
+  // COMANDOS Y NOTICIAS DE FÚTBOL
+  // ==========================================
+
+  // Respuesta picante para MESSI
+  if (text.includes('messi')) {
+    client.say(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
+    return;
+  }
+
+  // Comandos / menciones de Cristiano Ronaldo (CR7)
+  if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
+    const noticiasCR7 = [
+      `🐐 **[CR7]**: Cristiano Ronaldo sigue rompiendo récords y sumando goles oficiales en su carrera. ¡SIUUU! 🇵🇹`,
+      `⚽ **[CR7]**: Imparable en el área. El Comandante no se cansa de marcar.`,
+      `🔥 **[CR7]**: 5 Champions, máximo goleador histórico. Simplemente El Bicho.`
+    ];
+    const resCR7 = noticiasCR7[Math.floor(Math.random() * noticiasCR7.length)];
+    client.say(target, resCR7);
+    return;
+  }
+
+  // Comandos / menciones de Kylian Mbappé
+  if (text === '!mbappe' || text.includes('mbappe') || text.includes('mbappé')) {
+    const noticiasMbappe = [
+      `⚡ **[Mbappé]**: Velocidad pura y definición letal liderando el ataque en Europa. 🇫🇷`,
+      `🐢 **[Mbappé]**: La Tortuga Ninja marcando la diferencia en los partidos decisivos.`,
+      `⚽ **[Mbappé]**: Gambeta endiablada y potencia total. ¡Kylian está imparable!`
+    ];
+    const resMbappe = noticiasMbappe[Math.floor(Math.random() * noticiasMbappe.length)];
+    client.say(target, resMbappe);
+    return;
+  }
+
+  // Comando general de Noticias de Fútbol
+  if (text === '!noticias' || (esParaKyli && text.includes('noticia'))) {
+    const noticiasMix = [
+      `⚽ **[Cristiano Ronaldo]**: El Bicho sigue facturando dobletes y rompiendo marcas históricas. SIUUU!`,
+      `⚽ **[Kylian Mbappé]**: Mbappé a máxima velocidad liderando las noches de Champions League.`
+    ];
+    const noticia = noticiasMix[Math.floor(Math.random() * noticiasMix.length)];
+    client.say(target, noticia);
+    return;
+  }
+
+  // ==========================================
+  // DETECTOR DE SALUDOS EN EL CHAT
+  // ==========================================
   if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
     
-    // Si el mensaje tiene espacios largos o nombra a alguien, es una charla entre users y no nos metemos
     const palabras = text.split(' ');
     if (palabras.length > 2 || text.includes('@')) {
       return;
@@ -101,15 +145,12 @@ client.on('message', (target, context, message, self) => {
     const ahora = Date.now();
     const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
 
-    // Si todavía no pasaron 3 horas desde su último saludo, el bot lo ignora por completo
     if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
       return;
     }
 
-    // Guardamos el momento exacto de este saludo
     usuariosSaludados.set(usuario, ahora);
 
-    // Lista de respuestas variadas que el bot dirá al azar
     const respuestasBot = [
       `¡Holaaaa @${usuario} ! dancer`,
       `¡Holi @${usuario}! :3`,
@@ -123,17 +164,14 @@ client.on('message', (target, context, message, self) => {
     client.say(target, respuestaElegida);
   }
 
-  // Si alguien escribe "dancer", el bot responde "dancer dancer"
   if (text === 'dancer') {
     client.say(target, 'dancer dancer');
   }
 
-  // Si alguien escribe !lechazo dirigido a vladsuo
   if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
     client.say(target, 'Te voy a acusar con la jefecita');
   }
 
-  // Si VladSuo escribe !garche en su propio canal
   if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
     const respuestasGarche = [
       '@vladsuo eh :3 ',
@@ -163,20 +201,16 @@ app.get('/duelo', (req, res) => {
   const peleadores = [user, touser];
   const ganador = peleadores[Math.floor(Math.random() * peleadores.length)];
 
-  // Mensaje 1 (Inmediato)
   client.say(channel, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash `);
 
-  // Mensaje 2 (A los 5 segundos)
   setTimeout(() => {
     client.say(channel, `La Pelea esta reñida pero ambos saben que solo haber un solo ganador. catDespair`);
   }, 5000);
 
-  // Mensaje 3 (A los 10 segundos)
   setTimeout(() => {
     client.say(channel, `Se muerden, rasgunan y se pican los ojos el uno al otro catSlap `);
   }, 10000);
 
-  // Mensaje 4: Ganador (A los 15 segundos)
   setTimeout(() => {
     client.say(channel, `GANADOR: ${ganador} dancer `);
   }, 15000);
@@ -194,19 +228,15 @@ app.get('/amor', (req, res) => {
   const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
   const channel = `#${targetChannel}`;
 
-  // Mapeamos los nombres sin el '@' y en minúsculas para comparar bien
   const cleanedUser = user.replace('@', '').toLowerCase();
   const cleanedTouser = touser.replace('@', '').toLowerCase();
 
-  // Regla 1: Si están en el canal s2yone y aparece s2yone en el cálculo de amor
   if (targetChannel === 's2yone' && (cleanedUser === 's2yone' || cleanedTouser === 's2yone')) {
     client.say(channel, `Le voy a decir a mi papá`);
   } 
-  // Regla 2: Si etiquetan a vladsuo en cualquier canal
   else if (cleanedTouser === 'vladsuo') {
     client.say(channel, `No voy a medir eso, ese hombre tiene dueño, intenta con otro catDespair`);
   } 
-  // Regla 3: Comportamiento normal para cualquier otro caso
   else {
     const porcentaje = Math.floor(Math.random() * 101);
     client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
