@@ -131,25 +131,25 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Comandos / menciones de Cristiano Ronaldo (CR7) - Noticias reales
+  // Comandos / menciones de Cristiano Ronaldo (CR7) - Noticias reales optimizadas
   if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
-    buscarNoticiaFutbol('Cristiano Ronaldo futbol', (titular) => {
+    buscarNoticiaFutbol('Cristiano Ronaldo', (titular) => {
       if (titular) {
-        client.say(target, `🐐 @${usuario} **[CR7 en vivo]**: ${titular} 🇵🇹`);
+        client.say(target, `🐐 @${usuario} **[CR7]**: ${titular} 🇵🇹`);
       } else {
-        client.say(target, `🐐 @${usuario} **[CR7]**: El Bicho sigue rompiendo récords y sumando goles. ¡SIUUU! 🇵🇹`);
+        client.say(target, `🐐 @${usuario} **[CR7]**: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
       }
     });
     return;
   }
 
-  // Comandos / menciones de Kylian Mbappé - Noticias reales
+  // Comandos / menciones de Kylian Mbappé - Noticias reales optimizadas
   if (text === '!mbappe' || text.includes('mbappe') || text.includes('mbappé')) {
-    buscarNoticiaFutbol('Kylian Mbappe futbol', (titular) => {
+    buscarNoticiaFutbol('Kylian Mbappe', (titular) => {
       if (titular) {
-        client.say(target, `⚡ @${usuario} **[Mbappé en vivo]**: ${titular} 🇫🇷`);
+        client.say(target, `⚡ @${usuario} **[Mbappé]**: ${titular} 🇫🇷`);
       } else {
-        client.say(target, `⚡ @${usuario} **[Mbappé]**: Velocidad pura y definición letal liderando el ataque en Europa. 🇫🇷`);
+        client.say(target, `⚡ @${usuario} **[Mbappé]**: La Tortuga volando a máxima velocidad en Europa. 🇫🇷`);
       }
     });
     return;
@@ -159,7 +159,7 @@ client.on('message', (target, context, message, self) => {
   if (text === '!noticias' || (esParaKyli && text.includes('noticia'))) {
     buscarNoticiaFutbol('Cristiano Ronaldo Kylian Mbappe', (titular) => {
       if (titular) {
-        client.say(target, `⚽ **[Noticia en vivo]**: ${titular}`);
+        client.say(target, `⚽ **[Noticia]**: ${titular}`);
       } else {
         client.say(target, `⚽ **[Noticias]**: El Bicho y Mbappé dando de qué hablar en las canchas.`);
       }
