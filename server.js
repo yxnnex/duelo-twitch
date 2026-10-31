@@ -72,7 +72,7 @@ const bancoPreguntas = [
   { pregunta: '⚽ ¿En qué club de Francia jugó Lionel Messi antes de ir al Inter Miami?', respuestas: ['psg', 'paris saint germain', 'paris saint-germain'] },
   { pregunta: '⚽ ¿Cómo se llama la jugada de fútbol donde un jugador pasa la pelota por entre las piernas del rival?', respuestas: ['cano', 'caño', 'tunel'] },
   { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] },
-  // --- GEOGRAFÍA (Nuevas) ---
+  // --- GEOGRAFÍA ---
   { pregunta: '🌎 ¿Cuál es el país más extenso de todo el continente americano?', respuestas: ['canada'] },
   { pregunta: '🌎 ¿En qué país se encuentra la famosa ciudad antigua de Petra?', respuestas: ['jordania'] },
   { pregunta: '🌎 ¿Cuál es la capital de Japón?', respuestas: ['tokio'] },
@@ -403,6 +403,13 @@ client.on('message', (target, context, message, self) => {
     const respuestaAleatoria = respuestasGarche[Math.floor(Math.random() * respuestasGarche.length)];
     client.say(target, respuestaAleatoria);
   }
+});
+
+// ==========================================
+// RUTA RAÍZ PARA MANTENER DESPIIERTO EL BOT (UPTIMEROBOT)
+// ==========================================
+app.get('/', (req, res) => {
+  res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
 // ==========================================
