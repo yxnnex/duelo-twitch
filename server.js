@@ -24,6 +24,44 @@ const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
+// ESTADO DE LA TRIVIA DINÁMICA
+// ==========================================
+let triviaActiva = false;
+let respuestaCorrectaActual = '';
+let temporizadorTrivia = null;
+let preguntasUsadas = [];
+
+const bancoPreguntas = [
+  // --- LEAGUE OF LEGENDS ---
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuesta: 'yasuo' },
+  { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuesta: 'jonia' },
+  { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja?', respuesta: 'voracidad' },
+  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por pescar almas en la jungla?', respuesta: 'thresh' },
+  { pregunta: '🎮 ¿Cuál es el nombre de la espada legendaria que usa Master Yi?', respuesta: 'doran' }, // o wuju
+  { pregunta: '🎮 ¿Cómo se llama el dragón que otorga velocidad de movimiento fuera de combate?', respuesta: 'dragón de nubes' },
+  { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuesta: 'tirador' },
+  { pregunta: '🎮 ¿Cuál es la nacionalidad de Zed en el lore de Jonia?', respuesta: 'jonia' },
+  { pregunta: '🎮 ¿Qué objeto otorga invisibilidad activa y daño de letalidad a los asesinos?', respuesta: 'duskblade' },
+  { pregunta: '🎮 ¿Cómo se llama el barón épico principal que otorga mejoras de súbditos y daño de ataque?', respuesta: 'barón nashor' },
+  { pregunta: '🎮 ¿Qué campeona es la reina del vacío en el LoL?', respuesta: 'kai\'sa' }, // o kaisa o reksai
+  { pregunta: '🎮 ¿Cuál es el arma principal de Lux?', respuesta: 'vara lumínica' }, // o báculo
+
+  // --- FÚTBOL ---
+  { pregunta: '⚽ ¿Cuántos Balones de Oro ganó Cristiano Ronaldo?', respuesta: '5' },
+  { pregunta: '⚽ ¿Qué selección ganó la Copa del Mundo Qatar 2022?', respuesta: 'argentina' },
+  { pregunta: '⚽ ¿En qué club europeo debutó profesionalmente Cristiano Ronaldo?', respuesta: 'sporting de lisboa' },
+  { pregunta: '⚽ ¿En qué equipo juega actualmente Kylian Mbappé?', r: 'real madrid', respuesta: 'real madrid' },
+  { pregunta: '⚽ ¿Cuántos goles oficiales históricos persigue Cristiano Ronaldo en su carrera?', respuesta: '900' },
+  { pregunta: '⚽ ¿Qué país ganó la Eurocopa 2024?', respuesta: 'españa' },
+  { pregunta: '⚽ ¿Cuál es el clásico rival del Real Madrid en España?', respuesta: 'barcelona' },
+  { pregunta: '⚽ ¿En qué estadio juega de local la Selección Argentina?', respuesta: 'mas monumentaf' }, // o monumental
+  { pregunta: '⚽ ¿Qué dorsal (número de camiseta) caracteriza históricamente a Cristiano Ronaldo?', respuesta: '7' },
+  { pregunta: '⚽ ¿Qué apodo recibe Kylian Mbappé por su increíble velocidad?', respuesta: 'tortuga' },
+  { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuesta: 'real madrid' },
+  { pregunta: '⚽ ¿En qué país se disputó la Copa del Mundo de 2014?', respuesta: 'brasil' }
+];
+
+// ==========================================
 // FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
 // ==========================================
 function buscarNoticiaFutbol(query, callback) {
@@ -83,6 +121,55 @@ client.on('message', (target, context, message, self) => {
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
   // ==========================================
+  // 1. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
+  // ==========================================
+  if (triviaActiva) {
+    if (text.includes(respuestaCorrectaActual)) {
+      triviaActiva = false;
+      clearTimeout(temporizadorTrivia); // Cancelamos el cronómetro porque ya ganaron
+      client.say(target, `🎉 ¡Correcto @${usuario}! Acertaste la respuesta y ganaste la ronda de trivia 🏆 dancer`);
+      return;
+    }
+  }
+
+  // Comando para lanzar una trivia nueva
+  if (text === '!trivia') {
+    if (triviaActiva) {
+      client.say(target, `⚠️ ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash`);
+      return;
+    }
+
+    // Si ya se usaron todas, reiniciamos el mazo para que nunca se repita seguido
+    if (preguntasUsadas.length >= bancoPreguntas.length) {
+      preguntasUsadas = [];
+    }
+
+    // Filtrar preguntas no usadas
+    let disponibles = bancoPreguntas.filter((_, index) => !preguntasUsadas.includes(index));
+    let indiceAleatorio = Math.floor(Math.random() * disponibles.length);
+    let preguntaObj = disponibles[indiceAleatorio];
+    
+    // Guardar como usada
+    let indiceOriginal = bancoPreguntas.indexOf(preguntaObj);
+    preguntasUsadas.push(indiceOriginal);
+
+    respuestaCorrectaActual = preguntaObj.respuesta.toLowerCase();
+    triviaActiva = true;
+
+    client.say(target, `🧠 **[TRIVIA DINÁMICA]**: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
+
+    // Temporizador de 30 segundos si nadie responde
+    temporizadorTrivia = setTimeout(() => {
+      if (triviaActiva) {
+        triviaActiva = false;
+        client.say(target, `⏳ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${preguntaObj.respuesta.toUpperCase()}** catDespair`);
+      }
+    }, 30000);
+
+    return;
+  }
+
+  // ==========================================
   // DETECTOR DE CONSULTA DE CLIMA
   // ==========================================
   const esParaKyli = text.includes('kyli') || text.includes('s2kyli') || text.includes('s2kylian');
@@ -138,7 +225,7 @@ client.on('message', (target, context, message, self) => {
   // COMANDOS Y NOTICIAS DE FÚTBOL EN TIEMPO REAL
   // ==========================================
 
-  // Respuesta picante para MESSI (Ahora solo salta con el comando !messi o si le preguntan directamente)
+  // Respuesta picante para MESSI (Solo comando directo o mención directa)
   if (text === '!messi' || text.startsWith('messi ') || text === 'messi') {
     client.say(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
     return;
