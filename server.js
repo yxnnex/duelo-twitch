@@ -35,10 +35,13 @@ client.on('message', (target, context, message, self) => {
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
 
+  // Imprimimos en la consola de Render lo que lee el bot para que puedas debuguear si falla
+  console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
+
   // ==========================================
   // DETECTOR DE CONSULTA DE CLIMA
   // ==========================================
-  const esParaKyli = text.includes('kyli') || text.includes('s2kyli');
+  const esParaKyli = text.includes('kyli');
   const pideClima = text.includes('grados') || text.includes('clima') || text.includes('temperatura') || text.includes('tiempo');
 
   if (esParaKyli && pideClima) {
@@ -150,7 +153,7 @@ client.on('message', (target, context, message, self) => {
 app.get('/duelo', (req, res) => {
   const user = req.query.user || 'Alguien';
   let touser = req.query.touser;
-  if (!touser || touser.trim() === '' || touser === '$(touser)' \vert{}\vert{} touser === '$(query)') {
+  if (!touser || touser.trim() === '' || touser === '$(touser)' || touser === '$(query)') {
     touser = 'un rival misterioso';
   }
   
