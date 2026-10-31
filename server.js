@@ -24,6 +24,42 @@ const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
+// FUNCIÓN AUXILIAR PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
+// ==========================================
+function buscarNoticiaFutbol(query, callback) {
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es&gl=AR&ceid=AR:es`;
+
+  https.get(url, (res) => {
+    let xmlData = '';
+    res.on('data', (chunk) => { xmlData += chunk; });
+    res.on('end', () => {
+      try {
+        // Extraemos el primer título del XML de Google News usando regex de forma segura
+        const match = xmlData.match(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>/);
+        if (match && match[1]) {
+          // Limpiamos entidades HTML comunes y la etiqueta de la fuente al final
+          let titular = match[1]
+            .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+            .replace(/&amp;/g, '&')
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"');
+          
+          // Quitamos el canal o fuente si viene al final separado por guion
+          titular = titular.split(' - ')[0];
+          callback(titular);
+        } else {
+          callback(null);
+        }
+      } catch (e) {
+        callback(null);
+      }
+    });
+  }).on('error', () => {
+    callback(null);
+  });
+}
+
+// ==========================================
 // DETECTOR DE MENSAJES Y PALABRAS EN EL CHAT
 // ==========================================
 client.on('message', (target, context, message, self) => {
@@ -88,7 +124,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // COMANDOS Y NOTICIAS DE FÚTBOL
+  // COMANDOS Y NOTICIAS DE FÚTBOL EN TIEMPO REAL
   // ==========================================
 
   // Respuesta picante para MESSI
@@ -97,38 +133,39 @@ client.on('message', (target, context, message, self) => {
     return;
   }
 
-  // Comandos / menciones de Cristiano Ronaldo (CR7)
+  // Comandos / menciones de Cristiano Ronaldo (CR7) - Noticias reales
   if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
-    const noticiasCR7 = [
-      `🐐 **[CR7]**: Cristiano Ronaldo sigue rompiendo récords y sumando goles oficiales en su carrera. ¡SIUUU! 🇵🇹`,
-      `⚽ **[CR7]**: Imparable en el área. El Comandante no se cansa de marcar.`,
-      `🔥 **[CR7]**: 5 Champions, máximo goleador histórico. Simplemente El Bicho.`
-    ];
-    const resCR7 = noticiasCR7[Math.floor(Math.random() * noticiasCR7.length)];
-    client.say(target, resCR7);
+    buscarNoticiaFutbol('Cristiano Ronaldo futbol', (titular) => {
+      if (titular) {
+        client.say(target, `🐐 **[CR7 en vivo]**: ${titular} 🇵🇹`);
+      } else {
+        client.say(target, `🐐 **[CR7]**: El Bicho sigue rompiendo récords y sumando goles. ¡SIUUU! 🇵🇹`);
+      }
+    });
     return;
   }
 
-  // Comandos / menciones de Kylian Mbappé
+  // Comandos / menciones de Kylian Mbappé - Noticias reales
   if (text === '!mbappe' || text.includes('mbappe') || text.includes('mbappé')) {
-    const noticiasMbappe = [
-      `⚡ **[Mbappé]**: Velocidad pura y definición letal liderando el ataque en Europa. 🇫🇷`,
-      `🐢 **[Mbappé]**: La Tortuga Ninja marcando la diferencia en los partidos decisivos.`,
-      `⚽ **[Mbappé]**: Gambeta endiablada y potencia total. ¡Kylian está imparable!`
-    ];
-    const resMbappe = noticiasMbappe[Math.floor(Math.random() * noticiasMbappe.length)];
-    client.say(target, resMbappe);
+    buscarNoticiaFutbol('Kylian Mbappe futbol', (titular) => {
+      if (titular) {
+        client.say(target, `⚡ **[Mbappé en vivo]**: ${titular} 🇫🇷`);
+      } else {
+        client.say(target, `⚡ **[Mbappé]**: Velocidad pura y definición letal liderando el ataque en Europa. 🇫🇷`);
+      }
+    });
     return;
   }
 
   // Comando general de Noticias de Fútbol
   if (text === '!noticias' || (esParaKyli && text.includes('noticia'))) {
-    const noticiasMix = [
-      `⚽ **[Cristiano Ronaldo]**: El Bicho sigue facturando dobletes y rompiendo marcas históricas. SIUUU!`,
-      `⚽ **[Kylian Mbappé]**: Mbappé a máxima velocidad liderando las noches de Champions League.`
-    ];
-    const noticia = noticiasMix[Math.floor(Math.random() * noticiasMix.length)];
-    client.say(target, noticia);
+    buscarNoticiaFutbol('Cristiano Ronaldo Kylian Mbappe', (titular) => {
+      if (titular) {
+        client.say(target, `⚽ **[Noticia Fútbol]**: ${titular}`);
+      } else {
+        client.say(target, `⚽ **[Noticias]**: El Bicho y Mbappé dando de qué hablar en las canchas.`);
+      }
+    });
     return;
   }
 
