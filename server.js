@@ -33,16 +33,16 @@ let preguntasUsadas = [];
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
-  { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone?', respuestas: ['yasuo'] },
-  { pregunta: '🎮 ¿En qué región nació Ahri?', respuestas: ['jonia', 'ionia'] },
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
-  { pregunta: '🎮 ¿Cómo se llama el osito de peluche de Annie?', respuestas: ['tibbers'] },
+  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
   { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },
   { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },
   { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja o asistencia?', respuestas: ['voracidad'] },
-  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas ?', respuestas: ['thresh'] },
+  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas en la bot lane?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el dragón elemental que otorga velocidad de movimiento fuera de combate?', respuestas: ['dragon de nubes', 'nubes', 'viento', 'aire', 'dragon de viento'] },
   { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuestas: ['tirador', 'adc'] },
   { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },
@@ -92,7 +92,6 @@ function buscarNoticiaFutbol(query, callback) {
             titular = partes.join(' - ');
           }
 
-          // Recortamos el titular si es muy largo para que actúe como un resumen limpio
           if (titular.length > 90) {
             titular = titular.substring(0, 87) + '...';
           }
@@ -121,18 +120,27 @@ client.on('message', (target, context, message, self) => {
 
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
+  const usernameLower = context.username.toLowerCase();
 
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
   // ==========================================
-  // 1. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
+  // 1. REGLA ESPECIAL PARA ELIANHDC (CUANDO DICE HOLA)
+  // ==========================================
+  if (usernameLower === 'elianhdc' && (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text.includes('hola'))) {
+    client.say(target, `Uuh ya vino este pelotudo`);
+    return;
+  }
+
+  // ==========================================
+  // 2. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
   // ==========================================
   if (triviaActiva) {
     const acerto = respuestasValidasActuales.some(resp => text.includes(resp));
     if (acerto) {
       triviaActiva = false;
       clearTimeout(temporizadorTrivia);
-      client.say(target, ` ¡Correcto @${usuario}! Acertaste la respuesta y ganaste la ronda de trivia  dancer`);
+      client.say(target, `🎉 ¡Correcto @${usuario}! Acertaste la respuesta y ganaste la ronda de trivia 🏆 dancer`);
       return;
     }
   }
@@ -158,12 +166,12 @@ client.on('message', (target, context, message, self) => {
     respuestasValidasActuales = Array.isArray(preguntaObj.respuestas) ? preguntaObj.respuestas : [preguntaObj.respuestas];
     triviaActiva = true;
 
-    client.say(target, `🧠 [TRIVIA]: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
+    client.say(target, `🧠 **[TRIVIA]**: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
 
     temporizadorTrivia = setTimeout(() => {
       if (triviaActiva) {
         triviaActiva = false;
-        client.say(target, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
+        client.say(target, `⏳ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
       }
     }, 30000);
 
@@ -223,29 +231,29 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // COMANDOS Y NOTICIAS DE FÚTBOL EN TIEMPO REAL
+  // COMANDOS DE FÚTBOL (SOLO COMANDOS EXACTOS PARA EVITAR FALSOS POSITIVOS)
   // ==========================================
 
-  // Respuesta picante para MESSI (Solo comando directo o mención directa)
+  // Respuesta picante para MESSI
   if (text === '!messi' || text.startsWith('messi ') || text === 'messi') {
     client.say(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
     return;
   }
 
-  // Comandos / menciones de Cristiano Ronaldo (CR7) - Noticias reales
-  if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
+  // Comando exacto para CR7
+  if (text === '!cr7') {
     buscarNoticiaFutbol('Cristiano Ronaldo', (titular) => {
       if (titular) {
-        client.say(target, `🐐 @${usuario} [CR7]: ${titular} 🇵🇹`);
+        client.say(target, `🐐 @${usuario} **[CR7]**: ${titular} 🇵🇹`);
       } else {
-        client.say(target, `🐐 @${usuario} [CR7]: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
+        client.say(target, `🐐 @${usuario} **[CR7]**: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
       }
     });
     return;
   }
 
-  // Comandos / menciones de Kylian Mbappé - Noticias reales
-  if (text === '!mbappe' || text.includes('mbappe') || text.includes('mbappé')) {
+  // Comando exacto para Mbappé
+  if (text === '!mbappe' || text === '!mbappé') {
     buscarNoticiaFutbol('Kylian Mbappe', (titular) => {
       if (titular) {
         client.say(target, `⚡ @${usuario} **[Mbappé]**: ${titular} 🇫🇷`);
@@ -257,7 +265,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // Comando general de Noticias de Fútbol
-  if (text === '!noticias' || (esParaKyli && text.includes('noticia'))) {
+  if (text === '!noticias') {
     buscarNoticiaFutbol('Cristiano Ronaldo Kylian Mbappe', (titular) => {
       if (titular) {
         client.say(target, `⚽ **[Noticia]**: ${titular}`);
@@ -269,7 +277,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // DETECTOR DE SALUDOS EN EL CHAT
+  // DETECTOR DE SALUDOS EN EL CHAT (RESTO DE USUARIOS)
   // ==========================================
   if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
     
