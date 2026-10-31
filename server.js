@@ -1,3 +1,6 @@
+Aquí tienes tu archivo completo con la función del clima integrada exactamente como la pediste, sin tocar nada de lo demás:
+
+```javascript
 const express = require('express');
 const tmi = require('tmi.js');
 
@@ -33,6 +36,50 @@ client.on('message', (target, context, message, self) => {
 
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
+
+  // ==========================================
+  // DETECTOR DE CONSULTA DE CLIMA
+  // ==========================================
+  const esParaKyli = text.includes('kyli') || text.includes('s2kyli');
+  const pideClima = text.includes('grados') || text.includes('clima') || text.includes('temperatura') || text.includes('tiempo');
+
+  if (esParaKyli && pideClima) {
+    let lugar = text
+      .replace(/@?s2kyli/g, '')
+      .replace(/kyli/g, '')
+      .replace(/cuantos/g, '')
+      .replace(/cuanto/g, '')
+      .replace(/grados/g, '')
+      .replace(/hacen en/g, '')
+      .replace(/hace en/g, '')
+      .replace(/hacen/g, '')
+      .replace(/hace/g, '')
+      .replace(/clima/g, '')
+      .replace(/temperatura/g, '')
+      .replace(/en/g, '')
+      .replace(/el/g, '')
+      .replace(/la/g, '')
+      .replace(/\?/g, '')
+      .trim();
+
+    if (!lugar) lugar = 'Mendoza';
+
+    fetch(`https://wttr.in/${encodeURIComponent(lugar)}?format=j1`)
+      .then(res => res.json())
+      .then(data => {
+        const condicion = data.current_condition[0];
+        const tempC = condicion.temp_C;
+        const sensacion = condicion.FeelsLikeC;
+
+        client.say(target, `🌤️ @${usuario}, en ${lugar.toUpperCase()} hacen ${tempC}°C (sensación térmica de ${sensacion}°C).`);
+      })
+      .catch(err => {
+        console.error(err);
+        client.say(target, `No pude encontrar el clima para "${lugar}" @${usuario} catDespair`);
+      });
+      
+    return;
+  }
 
   // Detecta cuando alguien saluda (hola, ola, holis, olis, :3, unu, etc.)
   if (/^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu') {
@@ -166,3 +213,5 @@ app.get('/amor', (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Servidor escuchando en el puerto ${PORT}`));
+
+```
