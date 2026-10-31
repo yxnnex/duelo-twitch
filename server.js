@@ -24,7 +24,7 @@ const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
-// FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS CORREGIDO CON USER-AGENT)
+// FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
 // ==========================================
 function buscarNoticiaFutbol(query, callback) {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es-419&gl=AR&ceid=AR:es-419`;
@@ -138,8 +138,8 @@ client.on('message', (target, context, message, self) => {
   // COMANDOS Y NOTICIAS DE FÚTBOL EN TIEMPO REAL
   // ==========================================
 
-  // Respuesta picante para MESSI
-  if (text.includes('messi')) {
+  // Respuesta picante para MESSI (Ahora solo salta con el comando !messi o si le preguntan directamente)
+  if (text === '!messi' || text.startsWith('messi ') || text === 'messi') {
     client.say(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
     return;
   }
