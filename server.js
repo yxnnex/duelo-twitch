@@ -24,7 +24,7 @@ const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
-// FUNCIÓN AUXILIAR PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
+// FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
 // ==========================================
 function buscarNoticiaFutbol(query, callback) {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es&gl=AR&ceid=AR:es`;
@@ -34,17 +34,14 @@ function buscarNoticiaFutbol(query, callback) {
     res.on('data', (chunk) => { xmlData += chunk; });
     res.on('end', () => {
       try {
-        // Extraemos el primer título del XML de Google News usando regex de forma segura
         const match = xmlData.match(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>/);
         if (match && match[1]) {
-          // Limpiamos entidades HTML comunes y la etiqueta de la fuente al final
           let titular = match[1]
             .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
             .replace(/&amp;/g, '&')
             .replace(/&#39;/g, "'")
             .replace(/&quot;/g, '"');
           
-          // Quitamos el canal o fuente si viene al final separado por guion
           titular = titular.split(' - ')[0];
           callback(titular);
         } else {
@@ -139,7 +136,7 @@ client.on('message', (target, context, message, self) => {
       if (titular) {
         client.say(target, `🐐 **[CR7 en vivo]**: ${titular} 🇵🇹`);
       } else {
-        client.say(target, `🐐 **[CR7]**: El Bicho sigue rompiendo récords y sumando goles. ¡SIUUU! 🇵🇹`);
+        client.say(target, `🐐 **[CR7]**: No encontré noticias recientes en este segundo, ¡pero el Bicho sigue intacto! 🇵🇹`);
       }
     });
     return;
@@ -151,7 +148,7 @@ client.on('message', (target, context, message, self) => {
       if (titular) {
         client.say(target, `⚡ **[Mbappé en vivo]**: ${titular} 🇫🇷`);
       } else {
-        client.say(target, `⚡ **[Mbappé]**: Velocidad pura y definición letal liderando el ataque en Europa. 🇫🇷`);
+        client.say(target, `⚡ **[Mbappé]**: Sin noticias nuevas ahora mismo, pero la tortuga sigue a mil por hora. 🇫🇷`);
       }
     });
     return;
@@ -161,7 +158,7 @@ client.on('message', (target, context, message, self) => {
   if (text === '!noticias' || (esParaKyli && text.includes('noticia'))) {
     buscarNoticiaFutbol('Cristiano Ronaldo Kylian Mbappe', (titular) => {
       if (titular) {
-        client.say(target, `⚽ **[Noticia Fútbol]**: ${titular}`);
+        client.say(target, `⚽ **[Noticia en vivo]**: ${titular}`);
       } else {
         client.say(target, `⚽ **[Noticias]**: El Bicho y Mbappé dando de qué hablar en las canchas.`);
       }
