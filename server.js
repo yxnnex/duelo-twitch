@@ -71,7 +71,18 @@ const bancoPreguntas = [
   { pregunta: '⚽ ¿Qué club europeo ha ganado más títulos de UEFA Champions League en la historia?', respuestas: ['real madrid', 'madrid'] },
   { pregunta: '⚽ ¿En qué club de Francia jugó Lionel Messi antes de ir al Inter Miami?', respuestas: ['psg', 'paris saint germain', 'paris saint-germain'] },
   { pregunta: '⚽ ¿Cómo se llama la jugada de fútbol donde un jugador pasa la pelota por entre las piernas del rival?', respuestas: ['cano', 'caño', 'tunel'] },
-  { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] }
+  { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] },
+  // --- GEOGRAFÍA (Nuevas) ---
+  { pregunta: '🌎 ¿Cuál es el país más extenso de todo el continente americano?', respuestas: ['canada'] },
+  { pregunta: '🌎 ¿En qué país se encuentra la famosa ciudad antigua de Petra?', respuestas: ['jordania'] },
+  { pregunta: '🌎 ¿Cuál es la capital de Japón?', respuestas: ['tokio'] },
+  { pregunta: '🌎 ¿Qué país tiene forma de bota en el continente europeo?', respuestas: ['italia'] },
+  { pregunta: '🌎 ¿Cuál es el desierto cálido más grande del mundo?', respuestas: ['sahara', 'desierto del sahara'] },
+  { pregunta: '🌎 ¿En qué país se localiza la torre de Pisa?', respuestas: ['italia'] },
+  { pregunta: '🌎 ¿Cuál es el monte más alto del mundo ubicado en la cordillera del Himalaya?', respuestas: ['everest', 'monte everest'] },
+  { pregunta: '🌎 ¿Qué estrecho separa al continente europeo del africano en su punto más cercano?', respuestas: ['estrecho de gibraltar', 'gibraltar'] },
+  { pregunta: '🌎 ¿Cuál es la capital de Australia, aunque muchos piensen que es Sídney o Melbourne?', respuestas: ['canberra'] },
+  { pregunta: '🌎 ¿En qué país se encuentra el famoso monumento de el Taj Mahal?', respuestas: ['india'] }
 ];
 
 // ==========================================
@@ -417,7 +428,7 @@ app.get('/duelo', (req, res) => {
   }, 5000);
 
   setTimeout(() => {
-    client.say(channel, `Se muerden, rasgunan y se pican los ojos el uno al otro catSlap `);
+    client.say(channel, `Se muerden, rasguñan y se pican los ojos el uno al otro catSlap `);
   }, 10000);
 
   setTimeout(() => {
