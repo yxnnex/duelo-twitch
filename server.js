@@ -24,7 +24,7 @@ const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
 // ==========================================
-// ESTADO DE LA TRIVIA DINÁMICA (CON SINÓNIMOS)
+// ESTADO DE LA TRIVIA DINÁMICA (BANCO EN ESPAÑOL Y FLEXIBLE)
 // ==========================================
 let triviaActiva = false;
 let respuestasValidasActuales = [];
@@ -32,31 +32,32 @@ let temporizadorTrivia = null;
 let preguntasUsadas = [];
 
 const bancoPreguntas = [
-  // --- LEAGUE OF LEGENDS ---
+  // --- LEAGUE OF LEGENDS (Inspiradas en fuentes oficiales) ---
   { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuestas: ['yasuo'] },
   { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
+  { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },[cite: 3]
+  { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },[cite: 3]
+  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },[cite: 3]
+  { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },[cite: 3]
+  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },[cite: 3]
+  { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },[cite: 3]
   { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja o asistencia?', respuestas: ['voracidad'] },
   { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas en la bot lane?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el dragón elemental que otorga velocidad de movimiento fuera de combate?', respuestas: ['dragon de nubes', 'nubes', 'viento', 'aire', 'dragon de viento'] },
   { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuestas: ['tirador', 'adc'] },
-  { pregunta: '🎮 ¿Cuál es la nacionalidad de Zed en el lore del LoL?', respuestas: ['jonia', 'ionia'] },
-  { pregunta: '🎮 ¿Qué objeto de letalidad otorga invisibilidad activa al conseguir una baja?', respuestas: ['duskblade', 'hoja crepuscular', 'crepuscular'] },
-  { pregunta: '🎮 ¿Cómo se llama el monstruo épico de la jungla superior que otorga mejoras de súbditos al matarlo?', respuestas: ['baron', 'baron nashor', 'nashor'] },
-  { pregunta: '🎮 ¿Qué campeona del Vacío dispara ráfagas de espinas con su Q y evoluciona habilidades?', respuestas: ['kai\'sa', 'kaisa'] },
+  { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },[cite: 3]
 
   // --- FÚTBOL ---
   { pregunta: '⚽ ¿Cuántos Balones de Oro ganó Cristiano Ronaldo?', respuestas: ['5', 'cinco'] },
   { pregunta: '⚽ ¿Qué selección ganó la Copa del Mundo Qatar 2022?', respuestas: ['argentina', 'la scaloneta', 'albiceleste'] },
   { pregunta: '⚽ ¿En qué club europeo debutó profesionalmente Cristiano Ronaldo?', respuestas: ['sporting de lisboa', 'sporting', 'lisboa'] },
   { pregunta: '⚽ ¿En qué equipo juega actualmente Kylian Mbappé?', respuestas: ['real madrid', 'madrid'] },
-  { pregunta: '⚽ ¿Cuántos goles oficiales históricos persigue Cristiano Ronaldo en su carrera?', respuestas: ['900', 'mil', '1000'] },
   { pregunta: '⚽ ¿Qué país ganó la Eurocopa 2024?', respuestas: ['espana', 'españa'] },
   { pregunta: '⚽ ¿Cuál es el clásico rival del Real Madrid en España?', respuestas: ['barcelona', 'barsa', 'barca'] },
   { pregunta: '⚽ ¿En qué estadio juega de local la Selección Argentina?', respuestas: ['monumental', 'mas monumental', 'el monumental'] },
   { pregunta: '⚽ ¿Qué dorsal (número de camiseta) caracteriza históricamente a Cristiano Ronaldo?', respuestas: ['7', 'siete'] },
   { pregunta: '⚽ ¿Qué apodo recibe Kylian Mbappé por su velocidad en la cancha?', respuestas: ['tortuga', 'donatello'] },
-  { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] },
-  { pregunta: '⚽ ¿En qué país se disputó la Copa del Mundo de 2014?', respuestas: ['brasil'] }
+  { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] }
 ];
 
 // ==========================================
