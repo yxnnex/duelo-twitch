@@ -33,7 +33,7 @@ let preguntasUsadas = [];
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
-  { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿Cuál es el nombre de Yone en el LoL?', respuestas: ['yasuo'] },
   { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
