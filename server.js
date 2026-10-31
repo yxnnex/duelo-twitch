@@ -72,11 +72,12 @@ client.on('message', (target, context, message, self) => {
   // ==========================================
   // DETECTOR DE CONSULTA DE CLIMA
   // ==========================================
-  const esParaKyli = text.includes('kyli');
+  const esParaKyli = text.includes('kyli') || text.includes('s2kyli') || text.includes('s2kylian');
   const pideClima = text.includes('grados') || text.includes('clima') || text.includes('temperatura') || text.includes('tiempo');
 
   if (esParaKyli && pideClima) {
     let lugar = text
+      .replace(/@?s2kylian/g, '')
       .replace(/@?s2kyli/g, '')
       .replace(/kyli/g, '')
       .replace(/cuantos/g, '')
@@ -134,9 +135,9 @@ client.on('message', (target, context, message, self) => {
   if (text === '!cr7' || text.includes('cristiano') || text.includes('cr7')) {
     buscarNoticiaFutbol('Cristiano Ronaldo futbol', (titular) => {
       if (titular) {
-        client.say(target, `🐐 **[CR7 en vivo]**: ${titular} 🇵🇹`);
+        client.say(target, `🐐 @${usuario} **[CR7 en vivo]**: ${titular} 🇵🇹`);
       } else {
-        client.say(target, `🐐 **[CR7]**: No encontré noticias recientes en este segundo, ¡pero el Bicho sigue intacto! 🇵🇹`);
+        client.say(target, `🐐 @${usuario} **[CR7]**: El Bicho sigue rompiendo récords y sumando goles. ¡SIUUU! 🇵🇹`);
       }
     });
     return;
@@ -146,9 +147,9 @@ client.on('message', (target, context, message, self) => {
   if (text === '!mbappe' || text.includes('mbappe') || text.includes('mbappé')) {
     buscarNoticiaFutbol('Kylian Mbappe futbol', (titular) => {
       if (titular) {
-        client.say(target, `⚡ **[Mbappé en vivo]**: ${titular} 🇫🇷`);
+        client.say(target, `⚡ @${usuario} **[Mbappé en vivo]**: ${titular} 🇫🇷`);
       } else {
-        client.say(target, `⚡ **[Mbappé]**: Sin noticias nuevas ahora mismo, pero la tortuga sigue a mil por hora. 🇫🇷`);
+        client.say(target, `⚡ @${usuario} **[Mbappé]**: Velocidad pura y definición letal liderando el ataque en Europa. 🇫🇷`);
       }
     });
     return;
