@@ -1,7 +1,5 @@
-Aquí tienes tu archivo completo con la función del clima integrada exactamente como la pediste, sin tocar nada de lo demás:
-
-```javascript
 const express = require('express');
+const https = require('https');
 const tmi = require('tmi.js');
 
 const app = express();
@@ -64,19 +62,26 @@ client.on('message', (target, context, message, self) => {
 
     if (!lugar) lugar = 'Mendoza';
 
-    fetch(`https://wttr.in/${encodeURIComponent(lugar)}?format=j1`)
-      .then(res => res.json())
-      .then(data => {
-        const condicion = data.current_condition[0];
-        const tempC = condicion.temp_C;
-        const sensacion = condicion.FeelsLikeC;
+    const urlClima = `https://wttr.in/${encodeURIComponent(lugar)}?format=j1`;
 
-        client.say(target, `🌤️ @${usuario}, en ${lugar.toUpperCase()} hacen ${tempC}°C (sensación térmica de ${sensacion}°C).`);
-      })
-      .catch(err => {
-        console.error(err);
-        client.say(target, `No pude encontrar el clima para "${lugar}" @${usuario} catDespair`);
+    https.get(urlClima, (resClima) => {
+      let datos = '';
+      resClima.on('data', (chunk) => { datos += chunk; });
+      resClima.on('end', () => {
+        try {
+          const data = JSON.parse(datos);
+          const condicion = data.current_condition[0];
+          const tempC = condicion.temp_C;
+          const sensacion = condicion.FeelsLikeC;
+
+          client.say(target, `🌤️ @${usuario}, en ${lugar.toUpperCase()} hacen ${tempC}°C (sensación térmica de ${sensacion}°C).`);
+        } catch (e) {
+          client.say(target, `No pude procesar el clima para "${lugar}" @${usuario} catDespair`);
+        }
       });
+    }).on('error', (err) => {
+      client.say(target, `No pude encontrar el clima para "${lugar}" @${usuario} catDespair`);
+    });
       
     return;
   }
@@ -145,7 +150,7 @@ client.on('message', (target, context, message, self) => {
 app.get('/duelo', (req, res) => {
   const user = req.query.user || 'Alguien';
   let touser = req.query.touser;
-  if (!touser || touser.trim() === '' || touser === '$(touser)' || touser === '$(query)') {
+  if (!touser || touser.trim() === '' || touser === '$(touser)' \vert{}\vert{} touser === '$(query)') {
     touser = 'un rival misterioso';
   }
   
@@ -213,5 +218,3 @@ app.get('/amor', (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Servidor escuchando en el puerto ${PORT}`));
-
-```
