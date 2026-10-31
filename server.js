@@ -32,20 +32,20 @@ let temporizadorTrivia = null;
 let preguntasUsadas = [];
 
 const bancoPreguntas = [
-  // --- LEAGUE OF LEGENDS (Inspiradas en fuentes oficiales) ---
-  { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone en el LoL?', respuestas: ['yasuo'] },
-  { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
-  { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },[cite: 3]
-  { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },[cite: 3]
-  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie?', respuestas: ['tibbers'] },[cite: 3]
-  { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },[cite: 3]
-  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },[cite: 3]
-  { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },[cite: 3]
+  // --- LEAGUE OF LEGENDS ---
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿En qué región nació Ahri?', respuestas: ['jonia', 'ionia'] },
+  { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },
+  { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },
+  { pregunta: '🎮 ¿Cómo se llama el osito de peluche de Annie?', respuestas: ['tibbers'] },
+  { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },
+  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
+  { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },
   { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja o asistencia?', respuestas: ['voracidad'] },
-  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas?', respuestas: ['thresh'] },
+  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas ?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el dragón elemental que otorga velocidad de movimiento fuera de combate?', respuestas: ['dragon de nubes', 'nubes', 'viento', 'aire', 'dragon de viento'] },
   { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuestas: ['tirador', 'adc'] },
-  { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },[cite: 3]
+  { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },
 
   // --- FÚTBOL ---
   { pregunta: '⚽ ¿Cuántos Balones de Oro ganó Cristiano Ronaldo?', respuestas: ['5', 'cinco'] },
@@ -61,7 +61,7 @@ const bancoPreguntas = [
 ];
 
 // ==========================================
-// FUNCIÓN PARA BUSCAR NOTICIAS REALES (RSS GOOGLE NEWS)
+// FUNCIÓN PARA BUSCAR Y RESUMIR NOTICIAS DE FÚTBOL
 // ==========================================
 function buscarNoticiaFutbol(query, callback) {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es-419&gl=AR&ceid=AR:es-419`;
@@ -90,6 +90,11 @@ function buscarNoticiaFutbol(query, callback) {
           if (partes.length > 1) {
             partes.pop();
             titular = partes.join(' - ');
+          }
+
+          // Recortamos el titular si es muy largo para que actúe como un resumen limpio
+          if (titular.length > 90) {
+            titular = titular.substring(0, 87) + '...';
           }
 
           callback(titular);
