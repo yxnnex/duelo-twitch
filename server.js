@@ -33,16 +33,16 @@ let preguntasUsadas = [];
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS (Inspiradas en fuentes oficiales) ---
-  { pregunta: '🎮 ¿Cuál es el nombre del hermano gemelo y principal main de Yone en el LoL?', respuestas: ['yasuo'] },
+  { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone en el LoL?', respuestas: ['yasuo'] },
   { pregunta: '🎮 ¿En qué región de Runaterra nació Ahri?', respuestas: ['jonia', 'ionia'] },
   { pregunta: '🎮 ¿Quién es el hermano o hermana menor de Garen?', respuestas: ['lux'] },[cite: 3]
   { pregunta: '🎮 ¿Quién creó al campeón Blitzcrank?', respuestas: ['viktor'] },[cite: 3]
-  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },[cite: 3]
+  { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie?', respuestas: ['tibbers'] },[cite: 3]
   { pregunta: '🎮 ¿Qué campeón está casado (por alianza política) con Ashe?', respuestas: ['tryndamere'] },[cite: 3]
   { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },[cite: 3]
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque'] },[cite: 3]
   { pregunta: '🎮 ¿Cómo se llama la pasiva de Katarina que le reinicia las habilidades al conseguir una baja o asistencia?', respuestas: ['voracidad'] },
-  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas en la bot lane?', respuestas: ['thresh'] },
+  { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el dragón elemental que otorga velocidad de movimiento fuera de combate?', respuestas: ['dragon de nubes', 'nubes', 'viento', 'aire', 'dragon de viento'] },
   { pregunta: '🎮 ¿Qué rol cumple habitualmente Ashe en la Grieta del Invocador?', respuestas: ['tirador', 'adc'] },
   { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },[cite: 3]
