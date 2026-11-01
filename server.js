@@ -6,7 +6,7 @@ const tmi = require('tmi.js');
 // ==========================================
 const USERNAME = process.env.TWITCH_USERNAME || 's2kyli';
 const OAUTH_TOKEN = process.env.TWITCH_OAUTH;      // ej: oauth:xxxxxxxx
-const API_KEY = process.env.API_KEY;               // clave para /duelo y /amor
+const API_KEY = (process.env.API_KEY || '').trim(); // clave para /duelo y /amor
 const CLIENT_ID = process.env.TWITCH_CLIENT_ID;    // para los shoutouts (API de Twitch)
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;     // para guardar estadísticas de duelos
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -586,10 +586,18 @@ app.get('/', (req, res) => {
 
 // Middleware: exige API_KEY y un canal permitido
 function validarPeticion(req, res, next) {
-  if (!API_KEY || req.query.key !== API_KEY) return res.sendStatus(403);
+  const recibida = String(req.query.key || '').trim();
+  if (!API_KEY || recibida !== API_KEY) {
+    // No se imprime ninguna clave, solo los largos, para detectar espacios o letras de más
+    console.warn(`[API] 403 en ${req.path}: la key recibida tiene ${recibida.length} caracteres y la esperada ${API_KEY.length}`);
+    return res.sendStatus(403);
+  }
 
   const canal = String(req.query.channel || 's2yone').toLowerCase().replace('#', '');
-  if (!CANALES.includes(canal)) return res.sendStatus(400);
+  if (!CANALES.includes(canal)) {
+    console.warn(`[API] 400 en ${req.path}: canal no permitido "${canal}"`);
+    return res.sendStatus(400);
+  }
 
   req.canalNombre = canal;       // sin #
   req.canal = `#${canal}`;       // con #
