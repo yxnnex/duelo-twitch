@@ -7,6 +7,9 @@ const tmi = require('tmi.js');
 const USERNAME = process.env.TWITCH_USERNAME || 's2kyli';
 const OAUTH_TOKEN = process.env.TWITCH_OAUTH;      // ej: oauth:xxxxxxxx
 const API_KEY = process.env.API_KEY;               // clave para /duelo y /amor
+const CLIENT_ID = process.env.TWITCH_CLIENT_ID;    // para los shoutouts (API de Twitch)
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;     // para guardar estadísticas de duelos
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const PORT = process.env.PORT || 10000;
 const CANALES = ['s2yone', 'vladsuo'];
 
@@ -16,6 +19,13 @@ if (!OAUTH_TOKEN) {
 }
 if (!API_KEY) {
   console.warn('⚠️ Falta API_KEY: los endpoints /duelo y /amor van a rechazar todas las peticiones.');
+}
+
+if (!CLIENT_ID) {
+  console.warn('⚠️ Falta TWITCH_CLIENT_ID: el shoutout oficial está desactivado (solo se agradece el raid en el chat).');
+}
+if (!REDIS_URL || !REDIS_TOKEN) {
+  console.warn('⚠️ Sin Upstash: las estadísticas de duelos se guardan en memoria y se pierden al reiniciar.');
 }
 
 const client = new tmi.Client({
@@ -61,6 +71,124 @@ async function pedirTexto(url, ms = 8000) {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.text();
+}
+
+// ==========================================
+// API DE TWITCH (SHOUTOUT OFICIAL)
+// Requiere: token con scope moderator:manage:shoutouts,
+// TWITCH_CLIENT_ID, y que el bot sea moderador del canal.
+// ==========================================
+const TOKEN_API = OAUTH_TOKEN.replace(/^oauth:/, '');
+const idsCache = new Map();
+
+async function helix(ruta, metodo = 'GET') {
+  const res = await fetch(`https://api.twitch.tv/helix${ruta}`, {
+    method: metodo,
+    headers: { 'Client-Id': CLIENT_ID, Authorization: `Bearer ${TOKEN_API}` },
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) {
+    const detalle = await res.text().catch(() => '');
+    throw new Error(`Twitch API ${res.status}: ${detalle}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function idDeUsuario(login) {
+  login = login.toLowerCase();
+  if (idsCache.has(login)) return idsCache.get(login);
+
+  const data = await helix(`/users?login=${encodeURIComponent(login)}`);
+  const id = data && data.data && data.data[0] && data.data[0].id;
+  if (!id) throw new Error(`No encontré al usuario ${login}`);
+
+  idsCache.set(login, id);
+  return id;
+}
+
+async function hacerShoutout(canal, raider) {
+  const [desde, hacia, moderador] = await Promise.all([
+    idDeUsuario(canal.replace('#', '')),
+    idDeUsuario(raider),
+    idDeUsuario(USERNAME)
+  ]);
+  await helix(
+    `/chat/shoutouts?from_broadcaster_id=${desde}&to_broadcaster_id=${hacia}&moderator_id=${moderador}`,
+    'POST'
+  );
+}
+
+// ==========================================
+// ESTADÍSTICAS DE DUELOS (Upstash Redis por REST, o memoria si no está configurado)
+// ==========================================
+const usaRedis = Boolean(REDIS_URL && REDIS_TOKEN);
+const memoria = new Map(); // clave -> Map(usuario -> cantidad)
+
+async function redisCmd(...args) {
+  const res = await fetch(REDIS_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
+    body: JSON.stringify(args),
+    signal: AbortSignal.timeout(8000)
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.result;
+}
+
+async function sumar(clave, usuario) {
+  if (usaRedis) return redisCmd('HINCRBY', clave, usuario, 1);
+  const m = memoria.get(clave) || new Map();
+  memoria.set(clave, m);
+  m.set(usuario, (m.get(usuario) || 0) + 1);
+}
+
+async function top3(clave) {
+  let pares = [];
+  if (usaRedis) {
+    const r = await redisCmd('HGETALL', clave);
+    if (Array.isArray(r)) {
+      for (let i = 0; i < r.length; i += 2) pares.push([r[i], Number(r[i + 1])]);
+    } else if (r) {
+      pares = Object.entries(r).map(([u, n]) => [u, Number(n)]);
+    }
+  } else {
+    pares = [...(memoria.get(clave) || new Map())];
+  }
+  return pares.sort((a, b) => b[1] - a[1]).slice(0, 3);
+}
+
+const nombreValido = (u) => /^[a-z0-9_]{2,25}$/.test(u);
+
+async function registrarDuelo(canal, ganador, perdedor) {
+  const c = canal.replace('#', '');
+  try {
+    await Promise.all([
+      sumar(`duelo:${c}:victorias`, ganador),
+      sumar(`duelo:${c}:derrotas`, perdedor)
+    ]);
+  } catch (e) {
+    console.error('Error guardando el duelo:', e.message);
+  }
+}
+
+async function mensajeTopDuelos(canal) {
+  const c = canal.replace('#', '');
+  try {
+    const [gana, pierde] = await Promise.all([
+      top3(`duelo:${c}:victorias`),
+      top3(`duelo:${c}:derrotas`)
+    ]);
+    if (!gana.length && !pierde.length) {
+      return 'Todavía no hay duelos registrados. ¡Usen !duelo para empezar! catSmash';
+    }
+    const medallas = ['🥇', '🥈', '🥉'];
+    const formatear = (lista) => lista.map(([u, n], i) => `${medallas[i]} ${u} (${n})`).join(' · ');
+    return `🏆 MÁS VICTORIAS: ${formatear(gana)} | 💀 MÁS DERROTAS: ${formatear(pierde)}`;
+  } catch (e) {
+    console.error('Error leyendo estadísticas:', e.message);
+    return 'No pude leer las estadísticas de duelos ahora mismo catDespair';
+  }
 }
 
 // ==========================================
@@ -343,6 +471,12 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
+    // Top 3 de victorias y derrotas en duelos (de este canal)
+    if (text === '!duelos') {
+      decir(target, await mensajeTopDuelos(target));
+      return;
+    }
+
     // 4. Clima
     if (esParaKyli(textoNorm) && pideClima(textoNorm)) {
       responderClima(target, usuario, text);
@@ -413,6 +547,35 @@ client.on('message', async (target, context, message, self) => {
 });
 
 // ==========================================
+// RAIDS: agradece y hace shoutout automático
+// ==========================================
+client.on('raided', async (canal, raider, viewers) => {
+  try {
+    console.log(`[RAID] ${raider} -> ${canal} (${viewers} viewers)`);
+
+    const personas = viewers === 1 ? '1 persona' : `${viewers} personas`;
+    await decir(canal, `¡Gracias por el raid @${raider}! 🎉 Bienvenidos todos, llegaron ${personas} dancer`);
+
+    let shoutoutOk = false;
+    if (CLIENT_ID) {
+      try {
+        await hacerShoutout(canal, raider);
+        shoutoutOk = true;
+      } catch (e) {
+        console.error('No se pudo hacer el shoutout oficial:', e.message);
+      }
+    }
+
+    // Si el shoutout oficial no está disponible, avisamos con un mensaje normal
+    if (!shoutoutOk) {
+      await decir(canal, `Pasen a seguir a @${raider} en https://twitch.tv/${raider.toLowerCase()} ❤️`);
+    }
+  } catch (e) {
+    console.error('Error en el handler de raids:', e);
+  }
+});
+
+// ==========================================
 // SERVIDOR HTTP (UptimeRobot + comandos de Nightbot/StreamElements)
 // ==========================================
 const app = express();
@@ -458,6 +621,14 @@ app.get('/duelo', validarPeticion, async (req, res) => {
     await decir(canal, 'Se muerden, rasguñan y se pican los ojos el uno al otro catSlap');
     await esperar(5000);
     await decir(canal, `GANADOR: ${ganador} dancer`);
+
+    // Estadísticas: solo si ambos son usuarios reales y distintos
+    const perdedor = ganador === user ? touser : user;
+    const g = ganador.replace('@', '').toLowerCase();
+    const p = perdedor.replace('@', '').toLowerCase();
+    if (g !== p && nombreValido(g) && nombreValido(p)) {
+      await registrarDuelo(canal, g, p);
+    }
   } finally {
     est.dueloActivo = false;
   }
