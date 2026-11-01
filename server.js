@@ -186,7 +186,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 3. LÓGICA ESPECIAL PARA TOMADAA (IDÉNTICA A ELIAN)
+  // 3. LÓGICA ESPECIAL PARA TOMADAA (CORREGIDA Y BLINDADA)
   // ==========================================
   if (usernameLower === 'tomadaa') {
     if (estadoTomada === 2) {
@@ -203,10 +203,10 @@ client.on('message', (target, context, message, self) => {
       return;
     }
 
-    const esBardeo = text.includes('callate') || text.includes('bot') || text.includes('cerra el orto kyli') || text.includes('basura') || text.includes('pelotudo') || text.includes('estupido') || text.includes('hijo d puta');
+    const esBardeo = text.includes('callate') || text.includes('bot') || text.includes('cerra el orto kyli') || text.includes('basura') || text.includes('pelotudo') || text.includes('estupido') || text.includes('hijo de puta') || text.includes('hijo d puta');
     if (esBardeo) {
       estadoTomada = 1;
-      client.say(target, `Tomátela, uno es amable y aparece este "mod" dando el ejemplo de como NO hay q ser`);
+      client.say(target, `Tomátela pelotudo`);
       return;
     }
   }
@@ -406,7 +406,7 @@ client.on('message', (target, context, message, self) => {
 });
 
 // ==========================================
-// RUTA RAÍZ PARA MANTENER DESPIIERTO EL BOT (UPTIMEROBOT)
+// RUTA RAÍZ PARA MANTENER DESPIERTO EL BOT (UPTIMEROBOT)
 // ==========================================
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
