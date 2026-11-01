@@ -19,7 +19,7 @@ const client = new tmi.Client({
 
 client.connect().catch(console.error);
 
-// Memoria de cooldown (3 horas por usuario para saludos)
+// Memoria de cooldown (3 horas para el saludo exclusivo a s2yone)
 const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
@@ -160,55 +160,39 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // 2. LÓGICA ESPECIAL PARA ELIANHDC (PROGRESIVA Y BLOQUEO)
+  // 2. LÓGICA ESPECIAL PARA ELIANHDC
   // ==========================================
   if (usernameLower === 'elianhdc') {
-    if (estadoElian === 2) {
-      if (text.startsWith('!duelo')) {
-        client.say(target, `@${usuario} No. Directamente perdiste.`);
-        return;
-      }
-      return; 
-    }
-
     if (estadoElian === 1) {
       estadoElian = 2; 
-      client.say(target, `@${usuario} La diferencia entre vos y yo es que vos te gastás en bardearme y yo estoy programado para ignorarte..`);
+      client.say(target, `@${usuario} vos empezaste`);
       return;
     }
 
-    const esBardeo = text.includes('callate') || text.includes('bot') || text.includes('manco') || text.includes('cerra el orto kyli') || text.includes('pelotudo') || text.includes('estupido');
-    if (esBardeo) {
+    if (estadoElian === 0) {
       estadoElian = 1; 
-      client.say(target, `Uuh ya vino este p..`);
+      client.say(target, `Uuh este p..`);
       return;
     }
+    return;
   }
 
   // ==========================================
-  // 3. LÓGICA ESPECIAL PARA TOMADAA (CORREGIDA Y BLINDADA)
+  // 3. LÓGICA ESPECIAL PARA TOMADAA
   // ==========================================
   if (usernameLower === 'tomadaa') {
-    if (estadoTomada === 2) {
-      if (text.startsWith('!duelo')) {
-        client.say(target, `@${usuario} No. Directamente perdiste.`);
-        return;
-      }
-      return;
-    }
-
     if (estadoTomada === 1) {
       estadoTomada = 2;
-      client.say(target, `@${usuario} La diferencia entre vos y yo es que vos te gastás en bardearme y yo estoy programado para ignorarte. Seguí respondiendome como un BOT, dale, seguí.`);
+      client.say(target, `@${usuario} vos empezaste`);
       return;
     }
 
-    const esBardeo = text.includes('callate') || text.includes('bot') || text.includes('cerra el orto kyli') || text.includes('basura') || text.includes('pelotudo') || text.includes('estupido') || text.includes('hijo de puta') || text.includes('hijo d puta');
-    if (esBardeo) {
+    if (estadoTomada === 0) {
       estadoTomada = 1;
-      client.say(target, `Tomátela pelotudo`);
+      client.say(target, `Uuh llego el hijo de puta`);
       return;
     }
+    return;
   }
 
   // ==========================================
@@ -352,7 +336,7 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // DETECTOR DE SALUDOS (ESTRICTO: SOLO SALUDOS PUROS)
+  // DETECTOR DE SALUDOS (EXCLUSIVO PARA S2YONE)
   // ==========================================
   const esSaludoPuro = /^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu';
 
@@ -362,26 +346,17 @@ client.on('message', (target, context, message, self) => {
       return;
     }
 
-    const ahora = Date.now();
-    const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
+    if (usernameLower === 's2yone') {
+      const ahora = Date.now();
+      const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
 
-    if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
-      return;
+      if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
+        return;
+      }
+
+      usuariosSaludados.set(usuario, ahora);
+      client.say(target, `Hola s2yone dancer solo te saludo a tí porque los demas me tratan mal unu`);
     }
-
-    usuariosSaludados.set(usuario, ahora);
-
-    const respuestasBot = [
-      `¡Holaaaa @${usuario} ! dancer`,
-      `¡Holi @${usuario}! :3`,
-      `¡Holaa @${usuario}, un gusto verte por acá unu`,
-      `¡Olis @${usuario}! ❤️`,
-      `¡Hola @${usuario}! :3 ¿todo bien?`,
-      `¡Holiwis @${usuario}! unu`
-    ];
-
-    const respuestaElegida = respuestasBot[Math.floor(Math.random() * respuestasBot.length)];
-    client.say(target, respuestaElegida);
   }
 
   if (text === 'dancer') {
