@@ -362,16 +362,31 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    // 6. Saludos (solo #s2yone)
-    if (esSaludoPuro(text) && target.toLowerCase() === '#s2yone') {
-      if (text.split(' ').length <= 2 && !text.includes('@')) {
-        const ahora = Date.now();
-        const ultimo = usuariosSaludados.get(usernameLower) || 0;
-        if (ahora - ultimo >= COOLDOWN_SALUDO) {
-          usuariosSaludados.set(usernameLower, ahora);
-          const opciones = RESPUESTAS_SALUDO(usuario);
-          decir(target, opciones[Math.floor(Math.random() * opciones.length)]);
-        }
+    // 6. Saludos
+    const canalMinus = target.toLowerCase();
+    const saludoCorto = esSaludoPuro(text) && text.split(' ').length <= 2 && !text.includes('@');
+
+    // 6a. Mensaje especial: s2yone saluda en el canal de vladsuo
+    if (canalMinus === '#vladsuo' && usernameLower === 's2yone' && saludoCorto) {
+      const ahora = Date.now();
+      const clave = `${canalMinus}:${usernameLower}`;
+      const ultimo = usuariosSaludados.get(clave) || 0;
+      if (ahora - ultimo >= COOLDOWN_SALUDO) {
+        usuariosSaludados.set(clave, ahora);
+        decir(target, `Hola @${usuario} dancer solo te saludo a tí porque los demás me tratan mal unu`);
+      }
+      return;
+    }
+
+    // 6b. Saludos normales (solo en #s2yone)
+    if (canalMinus === '#s2yone' && saludoCorto) {
+      const ahora = Date.now();
+      const clave = `${canalMinus}:${usernameLower}`;
+      const ultimo = usuariosSaludados.get(clave) || 0;
+      if (ahora - ultimo >= COOLDOWN_SALUDO) {
+        usuariosSaludados.set(clave, ahora);
+        const opciones = RESPUESTAS_SALUDO(usuario);
+        decir(target, opciones[Math.floor(Math.random() * opciones.length)]);
       }
     }
 
