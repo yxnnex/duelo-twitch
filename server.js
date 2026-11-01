@@ -5,35 +5,41 @@ const tmi = require('tmi.js');
 const app = express();
 
 const USERNAME = 's2kyli';
-const OAUTH_TOKEN = 'oauth:6utee3wnxw971ag860bw2xuqpkto1i';
+// Utiliza una variable de entorno para mayor seguridad (configura TWITCH_OAUTH en tu panel de Render)
+const OAUTH_TOKEN = process.env.TWITCH_OAUTH || 'oauth:6utee3wnxw971ag860bw2xuqpkto1i';
 
-// Conexión a los dos canales
+// Conexión a los canales permitidos
+const CANALES = ['s2yone', 'vladsuo'];
 const client = new tmi.Client({
   options: { debug: false },
   identity: {
     username: USERNAME,
     password: OAUTH_TOKEN
   },
-  channels: [ 's2yone', 'vladsuo' ]
+  channels: CANALES
 });
 
 client.connect().catch(console.error);
 
-// Memoria de cooldown (3 horas por usuario para saludos en s2yone)
+// Memoria de cooldown para saludos en s2yone
 const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
-// Memoria para el flujo de bardo (0 = normal, 1 = advertido, 2 = bloqueado permanente)
-let estadoElian = 0;
-let estadoTomada = 0;
-
-// ==========================================
-// ESTADO DE LA TRIVIA DINÁMICA (BANCO EN ESPAÑOL Y FLEXIBLE)
-// ==========================================
-let triviaActiva = false;
-let respuestasValidasActuales = [];
-let temporizadorTrivia = null;
-let preguntasUsadas = [];
+// Estados independientes por canal para bardo y trivias
+const estadosCanales = {};
+function obtenerEstadoCanal(canal) {
+  if (!estadosCanales[canal]) {
+    estadosCanales[canal] = {
+      estadoElian: 0,
+      estadoTomada: 0,
+      triviaActiva: false,
+      respuestasValidasActuales: [],
+      temporizadorTrivia: null,
+      preguntasUsadas: []
+    };
+  }
+  return estadosCanales[canal];
+}
 
 const bancoPreguntas = [
   // --- LEAGUE OF LEGENDS ---
@@ -47,11 +53,10 @@ const bancoPreguntas = [
   { pregunta: '🎮 ¿A los cuántos minutos aparece por primera vez el Barón Nashor en la partida?', respuestas: ['20', 'minuto 20'] },
   { pregunta: '🎮 ¿Cuál es el nombre del campeón dragón creador de estrellas en el LoL?', respuestas: ['aurelion sol', 'aurelion'] },
   { pregunta: '🎮 ¿Cómo se llama el reino o ciudad flotante y futurista de Runaterra (contraparte de Zaun)?', respuestas: ['piltover'] },
-  { pregunta: '🎮 ¿Qué campeón utiliza una linterna y junta almas de enemigos caídos?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama la habilidad definitiva (R) de Yone?', respuestas: ['sello del destino', 'sello de destino'] },
   { pregunta: '🎮 ¿Qué campeón de LoL es un demonio del miedo y usa guadaña?', respuestas: ['fiddlesticks'] },
   { pregunta: '🎮 ¿Cómo se llama el mapa clásico donde se juegan las partidas 5v5 tradicionales de LoL?', respuestas: ['grieta del invocador', 'la grieta del invocador', 'grieta'] },
-  { pregunta: '🎮 ¿Qué campeón tirador (ADC) tiene como arma una escopeta de cuatro cañones llamada "Sussurro"?', respuestas: ['jhin'] },
+  { pregunta: '🎮 ¿Qué campeón tirador (ADC) tiene como arma un cañón de mano llamado Susurro?', respuestas: ['jhin'] },
   { pregunta: '🎮 ¿Cómo se llama el monstruo neutral que aparece en el foso antes del Barón Nashor?', respuestas: ['heraldo', 'heraldo de la grieta', 'larva', 'vacuo'] },
   // --- FÚTBOL ---
   { pregunta: '⚽ ¿Cuántos Balones de Oro ganó Cristiano Ronaldo?', respuestas: ['5', 'cinco'] },
@@ -85,19 +90,15 @@ const bancoPreguntas = [
   { pregunta: '🌎 ¿En qué país se encuentra el famoso monumento de el Taj Mahal?', respuestas: ['india'] }
 ];
 
-// ==========================================
-// FUNCIÓN PARA BUSCAR Y RESUMIR NOTICIAS DE FÚTBOL
-// ==========================================
+// Función para buscar noticias de fútbol con timeout seguro
 function buscarNoticiaFutbol(query, callback) {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es-419&gl=AR&ceid=AR:es-419`;
-
   const options = {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    timeout: 5000
   };
 
-  https.get(url, options, (res) => {
+  const req = https.get(url, options, (res) => {
     let xmlData = '';
     res.on('data', (chunk) => { xmlData += chunk; });
     res.on('end', () => {
@@ -116,11 +117,7 @@ function buscarNoticiaFutbol(query, callback) {
             partes.pop();
             titular = partes.join(' - ');
           }
-
-          if (titular.length > 90) {
-            titular = titular.substring(0, 87) + '...';
-          }
-
+          if (titular.length > 90) titular = titular.substring(0, 87) + '...';
           callback(titular);
         } else {
           callback(null);
@@ -129,174 +126,148 @@ function buscarNoticiaFutbol(query, callback) {
         callback(null);
       }
     });
-  }).on('error', (err) => {
-    console.error('Error RSS:', err.message);
+  });
+
+  req.on('error', () => callback(null));
+  req.on('timeout', () => {
+    req.destroy();
     callback(null);
   });
 }
 
-// ==========================================
-// DETECTOR DE MENSAJES Y PALABRAS EN EL CHAT
-// ==========================================
+// Normalizador para trivias sin tildes
+const normalizar = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 client.on('message', (target, context, message, self) => {
   if (self) return;
 
   const usernameLower = context.username.toLowerCase();
-
-  // IGNORAR BOTS (StreamElements, Nightbot, etc.)
   if (usernameLower === 'streamelements' || usernameLower === 'nightbot' || context['message-type'] === 'whisper') return;
 
   const text = message.toLowerCase().trim();
   const usuario = context['display-name'] || context.username;
+  const canalState = obtenerEstadoCanal(target);
 
   console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
-  // ==========================================
-  // 1. REGLA ESPECIAL PARA S2YONE ("CHAU BB")
-  // ==========================================
+  // 1. REGLA ESPECIAL PARA S2YONE
   if (usernameLower === 's2yone' && text.includes('chau bb')) {
     client.say(target, `@${usuario} adios, buenas noches eres lo mejor tkm (eso deberia decirte @vladsuo)`);
     return;
   }
 
-  // ==========================================
-  // 2. LÓGICA ESPECIAL PARA ELIANHDC
-  // ==========================================
+  // 2. LÓGICA ELIANHDC
   if (usernameLower === 'elianhdc') {
-    if (estadoElian === 1) {
-      estadoElian = 2; 
+    if (canalState.estadoElian === 1) {
+      canalState.estadoElian = 2; 
       client.say(target, `@${usuario} vos empezaste`);
       return;
     }
-
-    if (estadoElian === 0) {
-      estadoElian = 1; 
+    if (canalState.estadoElian === 0) {
+      canalState.estadoElian = 1; 
       client.say(target, `Uuh este p..`);
       return;
     }
     return;
   }
 
-  // ==========================================
-  // 3. LÓGICA ESPECIAL PARA TOMADAA
-  // ==========================================
+  // 3. LÓGICA TOMADAA
   if (usernameLower === 'tomadaa') {
-    if (estadoTomada === 1) {
-      estadoTomada = 2;
+    if (canalState.estadoTomada === 1) {
+      canalState.estadoTomada = 2;
       client.say(target, `@${usuario} vos empezaste`);
       return;
     }
-
-    if (estadoTomada === 0) {
-      estadoTomada = 1;
+    if (canalState.estadoTomada === 0) {
+      canalState.estadoTomada = 1;
       client.say(target, `Uuh llego el hijo de puta`);
       return;
     }
     return;
   }
 
-  // ==========================================
-  // 4. SISTEMA DE TRIVIA DINÁMICA CON TEMPORIZADOR
-  // ==========================================
-  if (triviaActiva) {
-    const acerto = respuestasValidasActuales.some(resp => text.includes(resp));
+  // 4. SISTEMA DE TRIVIA DINÁMICA
+  if (canalState.triviaActiva) {
+    const textNorm = normalizar(text);
+    const acerto = canalState.respuestasValidasActuales.some(resp => {
+      const respNorm = normalizar(resp);
+      return new RegExp(`(^|\\s)${respNorm}($|\\s|[.!?,])`).test(textNorm);
+    });
+
     if (acerto) {
-      triviaActiva = false;
-      clearTimeout(temporizadorTrivia);
-      client.say(target, ` ¡Correcto @${usuario}! Acertaste la respuesta  dancer`);
+      canalState.triviaActiva = false;
+      clearTimeout(canalState.temporizadorTrivia);
+      client.say(target, `¡Correcto @${usuario}! Acertaste la respuesta dancer`);
       return;
     }
   }
 
-  // Comando para lanzar una trivia nueva
   if (text === '!trivia') {
-    if (triviaActiva) {
+    if (canalState.triviaActiva) {
       client.say(target, `⚠️ ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash`);
       return;
     }
 
-    if (preguntasUsadas.length >= bancoPreguntas.length) {
-      preguntasUsadas = [];
+    if (canalState.preguntasUsadas.length >= bancoPreguntas.length) {
+      canalState.preguntasUsadas = [];
     }
 
-    let disponibles = bancoPreguntas.filter((_, index) => !preguntasUsadas.includes(index));
+    let disponibles = bancoPreguntas.filter((_, index) => !canalState.preguntasUsadas.includes(index));
     let indiceAleatorio = Math.floor(Math.random() * disponibles.length);
     let preguntaObj = disponibles[indiceAleatorio];
     
     let indiceOriginal = bancoPreguntas.indexOf(preguntaObj);
-    preguntasUsadas.push(indiceOriginal);
+    canalState.preguntasUsadas.push(indiceOriginal);
 
-    respuestasValidasActuales = Array.isArray(preguntaObj.respuestas) ? preguntaObj.respuestas : [preguntaObj.respuestas];
-    triviaActiva = true;
+    canalState.respuestasValidasActuales = Array.isArray(preguntaObj.respuestas) ? preguntaObj.respuestas : [preguntaObj.respuestas];
+    canalState.triviaActiva = true;
 
-    client.say(target, `🧠 **[TRIVIA]**: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
+    client.say(target, `🧠 [TRIVIA]: ${preguntaObj.pregunta} ⏱️ ¡Tienen 30 segundos!`);
 
-    temporizadorTrivia = setTimeout(() => {
-      if (triviaActiva) {
-        triviaActiva = false;
-        client.say(target, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${respuestasValidasActuales[0].toUpperCase()}** catDespair`);
+    canalState.temporizadorTrivia = setTimeout(() => {
+      if (canalState.triviaActiva) {
+        canalState.triviaActiva = false;
+        client.say(target, `¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: **${canalState.respuestasValidasActuales[0].toUpperCase()}** catDespair`);
       }
     }, 30000);
 
     return;
   }
 
-  // ==========================================
-  // DETECTOR DE CONSULTA DE CLIMA
-  // ==========================================
+  // DETECTOR DE CONSULTA DE CLIMA SEGURO (Filtrando palabras vacías exactas)
   const esParaKyli = text.includes('kyli') || text.includes('s2kyli') || text.includes('s2kylian');
-  const pideClima = text.includes('grados') || text.includes('clima') || text.includes('temperatura') || text.includes('tiempo');
+  const pideClima = text.includes('grados') || text.includes('clima') || text.includes('temperatura') || (text.includes('tiempo') && text.includes('hace'));
 
   if (esParaKyli && pideClima) {
-    let lugar = text
-      .replace(/@?s2kylian/g, '')
-      .replace(/@?s2kyli/g, '')
-      .replace(/kyli/g, '')
-      .replace(/cuantos/g, '')
-      .replace(/cuanto/g, '')
-      .replace(/grados/g, '')
-      .replace(/hacen en/g, '')
-      .replace(/hace en/g, '')
-      .replace(/hacen/g, '')
-      .replace(/hace/g, '')
-      .replace(/clima/g, '')
-      .replace(/temperatura/g, '')
-      .replace(/en/g, '')
-      .replace(/el/g, '')
-      .replace(/la/g, '')
-      .replace(/\?/g, '')
-      .trim();
-
+    const ignorar = new Set(['kyli','s2kyli','s2kylian','cuantos','cuanto','grados','hacen','hace','en','el','la','clima','temperatura','tiempo','de','que']);
+    let lugar = text.replace(/[?@]/g, '').split(/\s+/).filter(p => !ignorar.has(p)).join(' ').trim();
     if (!lugar) lugar = 'Mendoza';
 
     const urlClima = `https://wttr.in/${encodeURIComponent(lugar)}?format=j1`;
-
-    https.get(urlClima, (resClima) => {
+    const reqClima = https.get(urlClima, { timeout: 5000 }, (resClima) => {
       let datos = '';
       resClima.on('data', (chunk) => { datos += chunk; });
       resClima.on('end', () => {
         try {
           const data = JSON.parse(datos);
           const condicion = data.current_condition[0];
-          const tempC = condicion.temp_C;
-          const sensacion = condicion.FeelsLikeC;
-
-          client.say(target, `🌤️ @${usuario}, en ${lugar.toUpperCase()} hacen ${tempC}°C (sensación térmica de ${sensacion}°C).`);
+          client.say(target, `🌤️ @${usuario}, en ${lugar.toUpperCase()} hacen ${condicion.temp_C}°C (sensación térmica de ${condicion.FeelsLikeC}°C).`);
         } catch (e) {
           client.say(target, `No pude procesar el clima para "${lugar}" @${usuario} catDespair`);
         }
       });
-    }).on('error', (err) => {
-      client.say(target, `No pude encontrar el clima para "${lugar}" @${usuario} catDespair`);
     });
-      
+
+    reqClima.on('error', () => client.say(target, `No pude encontrar el clima para "${lugar}" @${usuario} catDespair`));
+    reqClima.on('timeout', () => {
+      reqClima.destroy();
+      client.say(target, `El servicio de clima tardó mucho en responder @${usuario} catDespair`);
+    });
+
     return;
   }
 
-  // ==========================================
   // COMANDOS DE FÚTBOL
-  // ==========================================
-
   if (text === '!messi' || text.startsWith('messi ') || text === 'messi') {
     client.say(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
     return;
@@ -304,56 +275,40 @@ client.on('message', (target, context, message, self) => {
 
   if (text === '!cr7') {
     buscarNoticiaFutbol('Cristiano Ronaldo', (titular) => {
-      if (titular) {
-        client.say(target, `🐐 @${usuario} **[CR7]**: ${titular} 🇵🇹`);
-      } else {
-        client.say(target, `🐐 @${usuario} **[CR7]**: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
-      }
+      if (titular) client.say(target, `🐐 @${usuario} [CR7]: ${titular} 🇵🇹`);
+      else client.say(target, `🐐 @${usuario} [CR7]: El Bicho sigue indetenible rompiendo redes. ¡SIUUU! 🇵🇹`);
     });
     return;
   }
 
   if (text === '!mbappe' || text === '!mbappé') {
     buscarNoticiaFutbol('Kylian Mbappe', (titular) => {
-      if (titular) {
-        client.say(target, `⚡ @${usuario} **[Mbappé]**: ${titular} 🇫🇷`);
-      } else {
-        client.say(target, `⚡ @${usuario} **[Mbappé]**: La Tortuga volando a máxima velocidad en Europa. 🇫🇷`);
-      }
+      if (titular) client.say(target, `⚡ @${usuario} [Mbappé]: ${titular} 🇫🇷`);
+      else client.say(target, `⚡ @${usuario} [Mbappé]: La Tortuga volando a máxima velocidad en Europa. 🇫🇷`);
     });
     return;
   }
 
   if (text === '!noticias') {
     buscarNoticiaFutbol('Cristiano Ronaldo Kylian Mbappe', (titular) => {
-      if (titular) {
-        client.say(target, `⚽ **[Noticia]**: ${titular}`);
-      } else {
-        client.say(target, `⚽ **[Noticias]**: El Bicho y Mbappé dando de qué hablar en las canchas.`);
-      }
+      if (titular) client.say(target, `⚽ [Noticia]: ${titular}`);
+      else client.say(target, `⚽ [Noticias]: El Bicho y Mbappé dando de qué hablar en las canchas.`);
     });
     return;
   }
 
-  // ==========================================
-  // DETECTOR DE SALUDOS (SOLO EN EL CANAL S2YONE PARA TODOS)
-  // ==========================================
+  // DETECTOR DE SALUDOS (Solo en #s2yone)
   const esSaludoPuro = /^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu';
 
   if (esSaludoPuro && target.toLowerCase() === '#s2yone') {
     const palabras = text.split(' ');
-    if (palabras.length > 2 || text.includes('@')) {
-      return;
-    }
+    if (palabras.length > 2 || text.includes('@')) return;
 
     const ahora = Date.now();
-    const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
+    const ultimoSaludo = usuariosSaludados.get(usernameLower) || 0;
 
-    if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
-      return;
-    }
-
-    usuariosSaludados.set(usuario, ahora);
+    if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) return;
+    usuariosSaludados.set(usernameLower, ahora);
 
     const respuestasBot = [
       `¡Holaaaa @${usuario} ! dancer`,
@@ -363,98 +318,65 @@ client.on('message', (target, context, message, self) => {
       `¡Hola @${usuario}! :3 ¿todo bien?`,
       `¡Holiwis @${usuario}! unu`
     ];
-
-    const respuestaElegida = respuestasBot[Math.floor(Math.random() * respuestasBot.length)];
-    client.say(target, respuestaElegida);
+    client.say(target, respuestasBot[Math.floor(Math.random() * respuestasBot.length)]);
   }
 
-  if (text === 'dancer') {
-    client.say(target, 'dancer dancer');
-  }
+  if (text === 'dancer') client.say(target, 'dancer dancer');
+  if (text.startsWith('!lechazo') && text.includes('vladsuo')) client.say(target, 'Te voy a acusar con la jefecita');
 
-  if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
-    client.say(target, 'Te voy a acusar con la jefecita');
-  }
-
-  if (target === '#vladsuo' && context.username.toLowerCase() === 'vladsuo' && text.startsWith('!garche')) {
-    const respuestasGarche = [
-      '@vladsuo eh :3 ',
-      '@vladsuo? ayoCR7 ',
-      '@vladsuo BOEE ',
-      '@vladsuo GatoCuliao',
-      '@vladsuo así te quería atrapar GatoCuliao'
-    ];
-    const respuestaAleatoria = respuestasGarche[Math.floor(Math.random() * respuestasGarche.length)];
-    client.say(target, respuestaAleatoria);
+  if (target === '#vladsuo' && usernameLower === 'vladsuo' && text.startsWith('!garche')) {
+    const respuestasGarche = ['@vladsuo eh :3 ', '@vladsuo? ayoCR7 ', '@vladsuo BOEE ', '@vladsuo GatoCuliao', '@vladsuo así te quería atrapar GatoCuliao'];
+    client.say(target, respuestasGarche[Math.floor(Math.random() * respuestasGarche.length)]);
   }
 });
 
-// ==========================================
-// RUTA RAÍZ PARA MANTENER DESPIERTO EL BOT (UPTIMEROBOT)
-// ==========================================
+// ENDPOINTS WEB SEGUROS
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
-// ==========================================
-// COMANDO 1: DUELO
-// ==========================================
 app.get('/duelo', (req, res) => {
+  if (req.query.key !== process.env.API_KEY) return res.status(403).send('Acceso no autorizado');
+
   const user = req.query.user || 'Alguien';
   let touser = req.query.touser;
-  if (!touser || touser.trim() === '' || touser === '$(touser)' || touser === '$(query)') {
-    touser = 'un rival misterioso';
-  }
+  if (!touser || touser.trim() === '' || touser === '$(touser)' || touser === '$(query)') touser = 'un rival misterioso';
   
   const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
   const channel = `#${targetChannel}`;
+  if (!CANALES.includes(targetChannel)) return res.status(400).send('Canal no válido');
 
   const peleadores = [user, touser];
   const ganador = peleadores[Math.floor(Math.random() * peleadores.length)];
 
-  client.say(channel, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash `);
-
-  setTimeout(() => {
-    client.say(channel, `La Pelea esta reñida pero ambos saben que solo haber un solo ganador. catDespair`);
-  }, 5000);
-
-  setTimeout(() => {
-    client.say(channel, `Se muerden, rasguñan y se pican los ojos el uno al otro catSlap `);
-  }, 10000);
-
-  setTimeout(() => {
-    client.say(channel, `GANADOR: ${ganador} dancer `);
-  }, 15000);
+  client.say(channel, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash`);
+  setTimeout(() => client.say(channel, `La pelea está reñida pero ambos saben que solo habrá un solo ganador. catDespair`), 5000);
+  setTimeout(() => client.say(channel, `Se muerden, rasguñan y se pican los ojos el uno al otro catSlap`), 10000);
+  setTimeout(() => client.say(channel, `GANADOR: ${ganador} dancer`), 15000);
 
   res.send(' ');
 });
 
-// ==========================================
-// COMANDO 2: AMOR (CON REGLAS ESPECIALES)
-// ==========================================
 app.get('/amor', (req, res) => {
+  if (req.query.key !== process.env.API_KEY) return res.status(403).send('Acceso no autorizado');
+
   const user = req.query.user || 'Alguien';
   const touser = req.query.touser || 'alguien';
-  
   const targetChannel = req.query.channel ? req.query.channel.toLowerCase() : 's2yone';
   const channel = `#${targetChannel}`;
+  if (!CANALES.includes(targetChannel)) return res.status(400).send('Canal no válido');
 
   const cleanedUser = user.replace('@', '').toLowerCase();
   const cleanedTouser = touser.replace('@', '').toLowerCase();
 
   if (targetChannel === 's2yone' && (cleanedUser === 's2yone' || cleanedTouser === 's2yone')) {
     client.say(channel, `Le voy a decir a mi papá`);
-  } 
-  else if (cleanedTouser === 'vladsuo') {
+  } else if (cleanedTouser === 'vladsuo') {
     client.say(channel, `No voy a medir eso, ese hombre tiene dueño, intenta con otro catDespair`);
-  } 
-  else {
+  } else {
     const porcentaje = Math.floor(Math.random() * 101);
     client.say(channel, `Calculando el amor entre ${user} y ${touser}... ❤️`);
-    
-    setTimeout(() => {
-      client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% BearHug `);
-    }, 3000);
+    setTimeout(() => client.say(channel, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% BearHug`), 3000);
   }
 
   res.send(' ');
