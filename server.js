@@ -19,7 +19,7 @@ const client = new tmi.Client({
 
 client.connect().catch(console.error);
 
-// Memoria de cooldown (3 horas para el saludo exclusivo a s2yone)
+// Memoria de cooldown (3 horas por usuario para saludos en s2yone)
 const usuariosSaludados = new Map();
 const COOLDOWN_TIEMPO = 3 * 60 * 60 * 1000;
 
@@ -336,27 +336,36 @@ client.on('message', (target, context, message, self) => {
   }
 
   // ==========================================
-  // DETECTOR DE SALUDOS (EXCLUSIVO PARA S2YONE)
+  // DETECTOR DE SALUDOS (SOLO EN EL CANAL S2YONE PARA TODOS)
   // ==========================================
   const esSaludoPuro = /^hola+\b/.test(text) || /^ola+\b/.test(text) || text === 'oli' || text === 'olis' || text === 'ola unu' || text === 'hola :3' || text === ':3' || text === 'unu';
 
-  if (esSaludoPuro) {
+  if (esSaludoPuro && target.toLowerCase() === '#s2yone') {
     const palabras = text.split(' ');
     if (palabras.length > 2 || text.includes('@')) {
       return;
     }
 
-    if (usernameLower === 's2yone') {
-      const ahora = Date.now();
-      const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
+    const ahora = Date.now();
+    const ultimoSaludo = usuariosSaludados.get(usuario) || 0;
 
-      if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
-        return;
-      }
-
-      usuariosSaludados.set(usuario, ahora);
-      client.say(target, `Hola s2yone dancer solo te saludo a tí porque los demas me tratan mal unu`);
+    if (ahora - ultimoSaludo < COOLDOWN_TIEMPO) {
+      return;
     }
+
+    usuariosSaludados.set(usuario, ahora);
+
+    const respuestasBot = [
+      `¡Holaaaa @${usuario} ! dancer`,
+      `¡Holi @${usuario}! :3`,
+      `¡Holaa @${usuario}, un gusto verte por acá unu`,
+      `¡Olis @${usuario}! ❤️`,
+      `¡Hola @${usuario}! :3 ¿todo bien?`,
+      `¡Holiwis @${usuario}! unu`
+    ];
+
+    const respuestaElegida = respuestasBot[Math.floor(Math.random() * respuestasBot.length)];
+    client.say(target, respuestaElegida);
   }
 
   if (text === 'dancer') {
