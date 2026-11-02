@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preguntas de trivia</title>
+<style>
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { max-width: 720px; margin: 0 auto; padding: 16px; }
+textarea, input { width: 100%; box-sizing: border-box; padding: 8px; font: inherit; }
+button { padding: 6px 12px; margin: 6px 6px 6px 0; font: inherit; cursor: pointer; }
+ul { padding: 0; list-style: none; }
+li { display: flex; gap: 8px; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #8884; }
+li span { overflow-wrap: anywhere; }
+#estado { min-height: 1.4em; } .error { color: #d33; }
+</style>
+</head>
+<body>
+<h1>Preguntas de trivia</h1>
+<p id="estado"></p>
+
+<section id="login">
+  <input id="clave" type="password" placeholder="Contraseña del panel">
+  <button id="entrar">Entrar</button>
+</section>
+
+<section id="panel" hidden>
+  <h2>Agregar preguntas</h2>
+  <p>Una por línea, así: <code>pregunta | respuesta1, respuesta2</code></p>
+  <textarea id="nuevas" rows="6" placeholder="¿Capital de Francia? | paris"></textarea>
+  <button id="agregar">Agregar</button>
+
+  <h2>Preguntas actuales (<span id="cuenta">0</span>)</h2>
+  <p id="aviso"></p>
+  <button id="importar">Importar las preguntas incluidas</button>
+  <button id="borrartodas">Borrar todas</button>
+  <ul id="lista"></ul>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let clave = sessionStorage.getItem('clave') || '';
+
+function mensaje(texto, error) {
+  $('estado').textContent = texto;
+  $('estado').className = error ? 'error' : '';
+}
+
+async function api(ruta, opciones = {}) {
+  const res = await fetch(ruta, {
+    ...opciones,
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': clave }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error ' + res.status);
+  return data;
+}
+
+async function cargar() {
+  const { preguntas, persistente } = await api('/admin/preguntas');
+  $('login').hidden = true;
+  $('panel').hidden = false;
+  $('cuenta').textContent = preguntas.length;
+  $('aviso').textContent = (preguntas.length ? '' : 'No hay preguntas propias: el bot usa las incluidas en el código. ')
+    + (persistente ? '' : 'Atención: sin Upstash las preguntas se pierden al reiniciar.');
+
+  const lista = $('lista');
+  lista.replaceChildren();
+  for (const p of preguntas) {
+    const li = document.createElement('li');
+    const texto = document.createElement('span');
+    texto.textContent = p.pregunta + '  →  ' + p.respuestas.join(', ');
+    const borrar = document.createElement('button');
+    borrar.textContent = 'Borrar';
+    borrar.onclick = () => accion(() => api('/admin/preguntas/' + encodeURIComponent(p.id), { method: 'DELETE' }), 'Pregunta borrada');
+    li.append(texto, borrar);
+    lista.append(li);
+  }
+}
+
+async function accion(fn, ok) {
+  try {
+    const r = await fn();
+    await cargar();
+    const extra = r && r.errores && r.errores.length ? ' (líneas con error: ' + r.errores.join(', ') + ')' : '';
+    mensaje(ok + extra, r && r.errores && r.errores.length > 0);
+  } catch (e) {
+    mensaje(e.message, true);
+  }
+}
+
+$('entrar').onclick = async () => {
+  clave = $('clave').value;
+  try {
+    await cargar();
+    sessionStorage.setItem('clave', clave);
+    mensaje('');
+  } catch (e) {
+    mensaje(e.message, true);
+  }
+};
+
+$('agregar').onclick = () => accion(async () => {
+  const r = await api('/admin/preguntas', { method: 'POST', body: JSON.stringify({ lineas: $('nuevas').value }) });
+  if (!r.errores.length) $('nuevas').value = '';
+  return r;
+}, 'Preguntas agregadas');
+
+$('importar').onclick = () => accion(() => api('/admin/importar', { method: 'POST' }), 'Preguntas incluidas importadas');
+
+$('borrartodas').onclick = () => {
+  if (confirm('¿Borrar TODAS las preguntas propias?')) accion(() => api('/admin/preguntas', { method: 'DELETE' }), 'Todas borradas');
+};
+
+if (clave) cargar().catch(() => sessionStorage.removeItem('clave'));
+</script>
+</body>
+</html>
