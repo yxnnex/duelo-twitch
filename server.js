@@ -304,19 +304,37 @@ function estadoDe(canal) {
 // MENSAJES AUTOMÁTICOS CADA 20 MINUTOS
 // ==========================================
 const MENSAJES_AUTO = ['CatCozy', 'Erm', 'holasinofender', 'aaa'];
-let ultimoMensajeAuto = null;
+const INTERVALO_AUTO = 20 * 60 * 1000; // 20 minutos
+const ultimoAuto = new Map(); // canal -> último mensaje enviado
 
-setInterval(() => {
-  // Filtra para no repetir el último enviado
-  const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoMensajeAuto);
-  const elegido = opciones[Math.floor(Math.random() * opciones.length)];
-  ultimoMensajeAuto = elegido;
+if (!CLIENT_ID) {
+  console.warn('⚠️ Sin TWITCH_CLIENT_ID no se puede saber si el canal está en vivo: los mensajes automáticos están desactivados.');
+}
 
-  // Los manda a todos los canales donde esté activo el bot
+async function canalEnVivo(canal) {
+  const data = await helix(`/streams?user_login=${encodeURIComponent(canal)}`);
+  return Boolean(data && data.data && data.data.length);
+}
+
+async function mensajesAutomaticos() {
+  if (!CLIENT_ID) return;
+
   for (const canal of CANALES) {
-    decir(`#${canal}`, elegido);
+    try {
+      if (!(await canalEnVivo(canal))) continue; // canal offline: no se dice nada
+
+      // Filtra para no repetir el último mensaje enviado en ese canal
+      const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoAuto.get(canal));
+      const elegido = opciones[Math.floor(Math.random() * opciones.length)];
+      ultimoAuto.set(canal, elegido);
+      await decir(`#${canal}`, elegido);
+    } catch (e) {
+      console.error(`No pude revisar si ${canal} está en vivo:`, e.message);
+    }
   }
-}, 20 * 60 * 1000); // 20 minutos en milisegundos
+}
+
+setInterval(mensajesAutomaticos, INTERVALO_AUTO);
 
 // ==========================================
 // BANCO DE TRIVIA
@@ -596,10 +614,6 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    if (text === '!messi' || text.startsWith('messi ')) {
-      decir(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
-      return;
-    }
 
     const cmdFutbol = COMANDOS_FUTBOL[textoNorm];
     if (cmdFutbol) {
@@ -680,7 +694,7 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
-const VERSION = 'v12-2026-11-02';
+const VERSION = 'v13-2026-11-02';
 
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
