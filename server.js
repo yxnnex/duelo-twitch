@@ -49,9 +49,9 @@ const normalizar = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toL
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Evita que un parámetro externo inyecte comandos de Twitch (/ban, .timeout, etc.)
+// Evita que un parámetro externo inyecte comandos de Twitch (/ban, .timeout, etc.) y limpia arrobas o asteriscos extra
 const limpiar = (s, max = 30) =>
-  String(s || '').replace(/^[\s/.\\]+/, '').slice(0, max).trim();
+  String(s || '').replace(/^[\s/.\\]+/, '').replace(/^@+/, '').slice(0, max).trim();
 
 // Enviar mensaje sin que un error tire abajo el bot
 async function decir(canal, mensaje) {
@@ -75,8 +75,6 @@ async function pedirTexto(url, ms = 8000) {
 
 // ==========================================
 // API DE TWITCH (SHOUTOUT OFICIAL)
-// Requiere: token con scope moderator:manage:shoutouts,
-// TWITCH_CLIENT_ID, y que el bot sea moderador del canal.
 // ==========================================
 const TOKEN_API = OAUTH_TOKEN.replace(/^oauth:/, '');
 const idsCache = new Map();
@@ -119,10 +117,10 @@ async function hacerShoutout(canal, raider) {
 }
 
 // ==========================================
-// ESTADÍSTICAS DE DUELOS (Upstash Redis por REST, o memoria si no está configurado)
+// ESTADÍSTICAS DE DUELOS
 // ==========================================
 const usaRedis = Boolean(REDIS_URL && REDIS_TOKEN);
-const memoria = new Map(); // clave -> Map(usuario -> cantidad)
+const memoria = new Map();
 
 async function redisCmd(...args) {
   const res = await fetch(REDIS_URL, {
@@ -192,16 +190,16 @@ async function mensajeTopDuelos(canal) {
 }
 
 // ==========================================
-// ESTADO POR CANAL (nada se comparte entre s2yone y vladsuo)
+// ESTADO POR CANAL
 // ==========================================
 const estados = new Map();
 
 function estadoDe(canal) {
   if (!estados.has(canal)) {
     estados.set(canal, {
-      trivia: null,            // trivia activa en este canal
-      usadas: [],              // preguntas ya usadas en este canal
-      advertidos: new Map(),   // usuario -> 1 (advertido) | 2 (ignorado)
+      trivia: null,
+      usadas: [],
+      advertidos: new Map(),
       dueloActivo: false
     });
   }
@@ -210,10 +208,8 @@ function estadoDe(canal) {
 
 // ==========================================
 // BANCO DE TRIVIA
-// (las respuestas se comparan sin tildes y como palabra completa)
 // ==========================================
 const BANCO = [
-  // --- LEAGUE OF LEGENDS ---
   { pregunta: '🎮 ¿Cuál es el nombre del hermano de Yone?', respuestas: ['yasuo'] },
   { pregunta: '🎮 ¿Quién es la hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Cómo se llama la ciudad subterránea y contaminada de Runaterra donde creció Jinx?', respuestas: ['zaun'] },
@@ -229,8 +225,6 @@ const BANCO = [
   { pregunta: '🎮 ¿Cómo se llama el mapa clásico donde se juegan las partidas 5v5 de LoL?', respuestas: ['grieta del invocador', 'grieta'] },
   { pregunta: '🎮 ¿Qué campeón tirador dispara solo cuatro balas y su arma se llama "Susurro"?', respuestas: ['jhin'] },
   { pregunta: '🎮 ¿Cómo se llama el monstruo neutral que aparece en el mapa antes del Barón Nashor?', respuestas: ['heraldo', 'heraldo de la grieta', 'larva', 'vacuo'] },
-
-  // --- FÚTBOL ---
   { pregunta: '⚽ ¿Cuántos Balones de Oro ganó Cristiano Ronaldo?', respuestas: ['5', 'cinco'] },
   { pregunta: '⚽ ¿Qué selección ganó la Copa del Mundo Qatar 2022?', respuestas: ['argentina', 'la scaloneta', 'albiceleste'] },
   { pregunta: '⚽ ¿En qué club europeo debutó profesionalmente Cristiano Ronaldo?', respuestas: ['sporting de lisboa', 'sporting', 'lisboa'] },
@@ -249,8 +243,6 @@ const BANCO = [
   { pregunta: '⚽ ¿En qué club de Francia jugó Lionel Messi antes de ir al Inter Miami?', respuestas: ['psg', 'paris saint germain', 'paris saint-germain'] },
   { pregunta: '⚽ ¿Cómo se llama la jugada donde se pasa la pelota por entre las piernas del rival?', respuestas: ['caño', 'tunel'] },
   { pregunta: '⚽ ¿Qué equipo ganó la Champions League en la temporada 2023-2024?', respuestas: ['real madrid', 'madrid'] },
-
-  // --- GEOGRAFÍA ---
   { pregunta: '🌎 ¿Cuál es el país más extenso de todo el continente americano?', respuestas: ['canada'] },
   { pregunta: '🌎 ¿En qué país se encuentra la famosa ciudad antigua de Petra?', respuestas: ['jordania'] },
   { pregunta: '🌎 ¿Cuál es la capital de Japón?', respuestas: ['tokio'] },
@@ -281,7 +273,6 @@ function iniciarTrivia(canal) {
 
   const p = BANCO[idx];
   const trivia = {
-    // coincide solo con palabras completas (así "15" no acierta un "5")
     patrones: p.respuestas.map(
       (r) => new RegExp(`(?<![a-z0-9])${escapeRegex(normalizar(r))}(?![a-z0-9])`)
     ),
@@ -314,7 +305,7 @@ function revisarRespuesta(canal, textoNorm, usuario) {
 }
 
 // ==========================================
-// NOTICIAS DE FÚTBOL (Google News RSS)
+// NOTICIAS DE FÚTBOL
 // ==========================================
 async function buscarNoticiaFutbol(query) {
   try {
@@ -332,7 +323,6 @@ async function buscarNoticiaFutbol(query) {
       .replace(/&gt;/g, '>')
       .trim();
 
-    // Google News agrega " - Nombre del medio" al final
     const partes = titular.split(' - ');
     if (partes.length > 1) {
       partes.pop();
@@ -365,7 +355,7 @@ const COMANDOS_FUTBOL = {
 };
 
 // ==========================================
-// CLIMA (wttr.in)
+// CLIMA
 // ==========================================
 const PALABRAS_IGNORADAS = new Set([
   'kyli', 's2kyli', 's2kylian', 'cuantos', 'cuanto', 'grados', 'hacen', 'hace', 'hay',
@@ -396,7 +386,7 @@ async function responderClima(canal, usuario, texto) {
 }
 
 // ==========================================
-// USUARIOS CON FLUJO ESPECIAL (advertencia -> ignorado), POR CANAL
+// USUARIOS CON FLUJO ESPECIAL
 // ==========================================
 const USUARIOS_ADVERTIDOS = {
   elianhdc: { aviso: 'Uuh este p..' },
@@ -404,7 +394,7 @@ const USUARIOS_ADVERTIDOS = {
 };
 
 // ==========================================
-// SALUDOS (solo en #s2yone) CON COOLDOWN
+// SALUDOS
 // ==========================================
 const usuariosSaludados = new Map();
 const COOLDOWN_SALUDO = 3 * 60 * 60 * 1000;
@@ -444,13 +434,11 @@ client.on('message', async (target, context, message, self) => {
 
     console.log(`[CHAT] (${target}) ${usuario}: ${text}`);
 
-    // 1. Regla especial para s2yone ("chau bb")
     if (usernameLower === 's2yone' && text.includes('chau bb')) {
       decir(target, `@${usuario} adios, buenas noches eres lo mejor tkm (eso deberia decirte @vladsuo)`);
       return;
     }
 
-    // 2. Flujo especial: 1er mensaje = aviso, 2do = "vos empezaste", después se ignora (por canal)
     if (USUARIOS_ADVERTIDOS[usernameLower]) {
       const nivel = est.advertidos.get(usernameLower) || 0;
       if (nivel === 0) {
@@ -463,7 +451,6 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    // 3. Trivia: ¿acertó alguien? (solo cuenta en ESTE canal)
     if (revisarRespuesta(target, textoNorm, usuario)) return;
 
     if (text === '!trivia') {
@@ -471,19 +458,16 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    // Top 3 de victorias y derrotas en duelos (de este canal)
     if (text === '!duelos') {
       decir(target, await mensajeTopDuelos(target));
       return;
     }
 
-    // 4. Clima
     if (esParaKyli(textoNorm) && pideClima(textoNorm)) {
       responderClima(target, usuario, text);
       return;
     }
 
-    // 5. Comandos de fútbol
     if (text === '!messi' || text.startsWith('messi ')) {
       decir(target, `@${usuario} ve a google, no soy tu pinche scooby doo para averiguarte todo`);
       return;
@@ -496,11 +480,9 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    // 6. Saludos
     const canalMinus = target.toLowerCase();
     const saludoCorto = esSaludoPuro(text) && text.split(' ').length <= 2 && !text.includes('@');
 
-    // 6a. Mensaje especial: s2yone saluda en el canal de vladsuo
     if (canalMinus === '#vladsuo' && usernameLower === 's2yone' && saludoCorto) {
       const ahora = Date.now();
       const clave = `${canalMinus}:${usernameLower}`;
@@ -512,7 +494,6 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    // 6b. Saludos normales (solo en #s2yone)
     if (canalMinus === '#s2yone' && saludoCorto) {
       const ahora = Date.now();
       const clave = `${canalMinus}:${usernameLower}`;
@@ -524,7 +505,6 @@ client.on('message', async (target, context, message, self) => {
       }
     }
 
-    // 7. Extras
     if (text === 'dancer') decir(target, 'dancer dancer');
 
     if (text.startsWith('!lechazo') && text.includes('vladsuo')) {
@@ -547,7 +527,7 @@ client.on('message', async (target, context, message, self) => {
 });
 
 // ==========================================
-// RAIDS: agradece y hace shoutout automático
+// RAIDS
 // ==========================================
 client.on('raided', async (canal, raider, viewers) => {
   try {
@@ -566,7 +546,6 @@ client.on('raided', async (canal, raider, viewers) => {
       }
     }
 
-    // Si el shoutout oficial no está disponible, avisamos con un mensaje normal
     if (!shoutoutOk) {
       await decir(canal, `Pasen a seguir a @${raider} en https://twitch.tv/${raider.toLowerCase()} ❤️`);
     }
@@ -576,7 +555,7 @@ client.on('raided', async (canal, raider, viewers) => {
 });
 
 // ==========================================
-// SERVIDOR HTTP (UptimeRobot + comandos de Nightbot/StreamElements)
+// SERVIDOR HTTP
 // ==========================================
 const app = express();
 
@@ -584,23 +563,28 @@ app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
-// Middleware: exige API_KEY y un canal permitido
+// Middleware seguro y tolerante ante variables rotas de Nightbot
 function validarPeticion(req, res, next) {
   const recibida = String(req.query.key || '').trim();
   if (!API_KEY || recibida !== API_KEY) {
-    // No se imprime ninguna clave, solo los largos, para detectar espacios o letras de más
     console.warn(`[API] 403 en ${req.path}: la key recibida tiene ${recibida.length} caracteres y la esperada ${API_KEY.length}`);
     return res.sendStatus(403);
   }
 
-  const canal = String(req.query.channel || 's2yone').toLowerCase().replace('#', '');
-  if (!CANALES.includes(canal)) {
-    console.warn(`[API] 400 en ${req.path}: canal no permitido "${canal}"`);
+  let canalParam = String(req.query.channel || 's2yone').toLowerCase().replace('#', '').trim();
+  
+  // Si Nightbot envía una variable rota o vacía, caemos por defecto en 's2yone'
+  if (!canalParam || canalParam.includes('invalid') || canalParam.includes('$')) {
+    canalParam = 's2yone';
+  }
+
+  if (!CANALES.includes(canalParam)) {
+    console.warn(`[API] 400 en ${req.path}: canal no permitido "${canalParam}"`);
     return res.sendStatus(400);
   }
 
-  req.canalNombre = canal;       // sin #
-  req.canal = `#${canal}`;       // con #
+  req.canalNombre = canalParam;
+  req.canal = `#${canalParam}`;
   next();
 }
 
@@ -609,16 +593,16 @@ app.get('/duelo', validarPeticion, async (req, res) => {
   const canal = req.canal;
   const est = estadoDe(canal);
 
-  // Respondemos YA para que Nightbot no se quede esperando 15 segundos
+  // Respuesta inmediata a Nightbot para evitar timeouts
   res.send(' ');
 
-  if (est.dueloActivo) return; // evita duelos solapados
+  if (est.dueloActivo) return;
   est.dueloActivo = true;
 
   try {
     const user = limpiar(req.query.user) || 'Alguien';
     let touser = limpiar(req.query.touser);
-    if (!touser || touser === '$(touser)' || touser === '$(query)') touser = 'un rival misterioso';
+    if (!touser || touser.includes('$')) touser = 'un rival misterioso';
 
     const ganador = Math.random() < 0.5 ? user : touser;
 
@@ -630,7 +614,6 @@ app.get('/duelo', validarPeticion, async (req, res) => {
     await esperar(5000);
     await decir(canal, `GANADOR: ${ganador} dancer`);
 
-    // Estadísticas: solo si ambos son usuarios reales y distintos
     const perdedor = ganador === user ? touser : user;
     const g = ganador.replace('@', '').toLowerCase();
     const p = perdedor.replace('@', '').toLowerCase();
@@ -648,7 +631,8 @@ app.get('/amor', validarPeticion, async (req, res) => {
 
   const canal = req.canal;
   const user = limpiar(req.query.user) || 'Alguien';
-  const touser = limpiar(req.query.touser) || 'alguien';
+  let touser = limpiar(req.query.touser);
+  if (!touser || touser.includes('$')) touser = 'alguien';
 
   const u = user.replace('@', '').toLowerCase();
   const t = touser.replace('@', '').toLowerCase();
