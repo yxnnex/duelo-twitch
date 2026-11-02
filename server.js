@@ -182,7 +182,7 @@ async function mensajeTopDuelos(canal) {
     }
     const medallas = ['🥇', '🥈', '🥉'];
     const formatear = (lista) => lista.map(([u, n], i) => `${medallas[i]} ${u} (${n})`).join(' · ');
-    return `🏆 MÁS VICTORIAS: ${formatear(gana)} | 💀 MÁS DERROTAS: ${formatear(pierde)}`;
+    return `🏆 VICTORIAS: ${formatear(gana)} | DERROTAS: ${formatear(pierde)}`;
   } catch (e) {
     console.error('Error leyendo estadísticas:', e.message);
     return 'No pude leer las estadísticas de duelos ahora mismo catDespair';
@@ -214,7 +214,7 @@ const BANCO = [
   { pregunta: '🎮 ¿Quién es la hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Cómo se llama la ciudad subterránea y contaminada de Runaterra donde creció Jinx?', respuestas: ['zaun'] },
   { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
-  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
+  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utilizes Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque', 'tank'] },
   { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el monstruo épico más poderoso del mapa, que da un buff a todo el equipo?', respuestas: ['baron nashor', 'baron', 'nashor'] },
@@ -389,8 +389,8 @@ async function responderClima(canal, usuario, texto) {
 // USUARIOS CON FLUJO ESPECIAL
 // ==========================================
 const USUARIOS_ADVERTIDOS = {
-  elianhdc: { aviso: 'Uuh este p..' },
-  tomadaa: { aviso: 'Uuh llego el hijo de puta' }
+  elianhdc: { aviso: 'Uuh aparecio mi hater Nro 1, felicidades.' },
+  tomadaa: { aviso: 'Uuh llego el hijo de puta mi fan nro 2, siempre segundo.' }
 };
 
 // ==========================================
@@ -480,7 +480,7 @@ client.on('message', async (target, context, message, self) => {
         await esperar(5000);
         await decir(target, 'La pelea está reñida pero ambos saben que solo puede haber un ganador. catDespair');
         await esperar(5000);
-        await decir(target, 'Se muerden, rasguñan y se pican los ojos el uno al otro catSlap');
+        await decir(target, 'Se muerden, rasguñan y se pican los ojos el uno al otro catSlap ... creo que murió uno de ellos..');
         await esperar(5000);
         await decir(target, `GANADOR: ${ganador} dancer`);
 
@@ -610,7 +610,7 @@ function validarPeticion(req, res, next) {
   next();
 }
 
-// ---------- ENDPOINT DUELO (por si lo usas externamente) ----------
+// ---------- ENDPOINT DUELO ----------
 app.get('/duelo', validarPeticion, async (req, res) => {
   const canal = req.canal;
   const est = estadoDe(canal);
