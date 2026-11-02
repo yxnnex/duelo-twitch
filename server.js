@@ -178,14 +178,18 @@ async function mensajeTopDuelos(canal) {
       top3(`duelo:${c}:derrotas`)
     ]);
     if (!gana.length && !pierde.length) {
-      return 'Todavía no hay duelos registrados. ¡Usen !duelo para empezar! catSmash';
+      return ['Todavía no hay duelos registrados. ¡Usen !duelo para empezar! catSmash'];
     }
-    const medallas = ['🥇', '🥈', '🥉'];
-    const formatear = (lista) => lista.map(([u, n], i) => `${medallas[i]} ${u} (${n})`).join(' · ');
-    return `🏆 VICTORIAS: ${formatear(gana)} | DERROTAS: ${formatear(pierde)}`;
+    // Sin emojis de medalla: algunos clientes del chat los muestran como texto (":first_place:")
+    const formatear = (lista) =>
+      lista.length ? lista.map(([u, n], i) => `${i + 1}° ${u} (${n})`).join(' | ') : 'sin datos';
+    return [
+      `TOP VICTORIAS: ${formatear(gana)}`,
+      `TOP DERROTAS: ${formatear(pierde)}`
+    ];
   } catch (e) {
     console.error('Error leyendo estadísticas:', e.message);
-    return 'No pude leer las estadísticas de duelos ahora mismo catDespair';
+    return ['No pude leer las estadísticas de duelos ahora mismo catDespair'];
   }
 }
 
@@ -214,7 +218,7 @@ const BANCO = [
   { pregunta: '🎮 ¿Quién es la hermana menor de Garen?', respuestas: ['lux'] },
   { pregunta: '🎮 ¿Cómo se llama la ciudad subterránea y contaminada de Runaterra donde creció Jinx?', respuestas: ['zaun'] },
   { pregunta: '🎮 ¿Cómo se llama el osito de peluche que lleva Annie a la batalla?', respuestas: ['tibbers'] },
-  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utilizes Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
+  { pregunta: '🎮 ¿Cómo se llama el arco legendario que utiliza Ashe?', respuestas: ['avarosa', 'arco de avarosa'] },
   { pregunta: '🎮 ¿Qué clase o rol de campeón es Poppy según su kit?', respuestas: ['tanque', 'tank'] },
   { pregunta: '🎮 ¿Qué campeón usa un farol y es conocido por atrapar almas?', respuestas: ['thresh'] },
   { pregunta: '🎮 ¿Cómo se llama el monstruo épico más poderoso del mapa, que da un buff a todo el equipo?', respuestas: ['baron nashor', 'baron', 'nashor'] },
@@ -459,18 +463,18 @@ client.on('message', async (target, context, message, self) => {
     }
 
     if (text === '!duelos') {
-      decir(target, await mensajeTopDuelos(target));
+      for (const linea of await mensajeTopDuelos(target)) await decir(target, linea);
       return;
     }
 
     // COMANDO DUELO DIRECTO EN EL CHAT
-    if (text.startsWith('!duelo')) {
+    if (text === '!duelo' || text.startsWith('!duelo ')) {
       if (est.dueloActivo) return;
       est.dueloActivo = true;
 
       try {
         const user = usuario;
-        const partes = message.split(' ');
+        const partes = message.trim().split(/\s+/);
         let touser = partes[1] ? limpiar(partes[1]) : 'un rival misterioso';
         if (!touser || touser.includes('$')) touser = 'un rival misterioso';
 
@@ -594,19 +598,34 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
+const VERSION = 'v9-2026-11-02';
+
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
+// Sirve para comprobar qué versión del código está corriendo en Render
+app.get('/version', (req, res) => {
+  res.status(200).send(`S2kyli Bot ${VERSION}`);
+});
+
 function validarPeticion(req, res, next) {
   const recibida = String(req.query.key || '').trim();
-  if (recibida !== API_KEY) {
+  if (!API_KEY || recibida !== API_KEY) {
+    // Solo se muestran los largos (nunca las claves) para detectar espacios o letras de más
+    console.warn(`[API] 403 en ${req.path}: la key recibida tiene ${recibida.length} caracteres y la esperada ${API_KEY.length}`);
     return res.sendStatus(403);
   }
 
-  const canalParam = String(req.query.channel || 's2yone').toLowerCase().replace('#', '').trim();
-  req.canalNombre = canalParam;
-  req.canal = `#${canalParam}`;
+  // Solo letras, números y guion bajo; y únicamente los canales donde está el bot
+  const canal = String(req.query.channel || 's2yone').toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (!CANALES.includes(canal)) {
+    console.warn(`[API] 400 en ${req.path}: canal no permitido, llegó ${JSON.stringify(req.query.channel)}`);
+    return res.sendStatus(400);
+  }
+
+  req.canalNombre = canal;
+  req.canal = `#${canal}`;
   next();
 }
 
@@ -674,4 +693,4 @@ app.get('/amor', validarPeticion, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Servidor escuchando en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor escuchando en el puerto ${PORT} (${VERSION})`));
