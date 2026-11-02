@@ -572,21 +572,15 @@ client.on('raided', async (canal, raider, viewers) => {
   try {
     console.log(`[RAID] ${raider} -> ${canal} (${viewers} viewers)`);
 
-    const personas = viewers === 1 ? '1 persona' : `${viewers} personas`;
-    await decir(canal, `¡Gracias por el raid @${raider}! 🎉 Bienvenidos todos, llegaron ${personas} dancer`);
+    await decir(canal, `¡Gracias por el raid @${raider}! Bienvenidos todos dancer`);
 
-    let shoutoutOk = false;
+    // Shoutout oficial de Twitch. Si falla (bot sin mod, canal offline, cooldown), no se manda nada más.
     if (CLIENT_ID) {
       try {
         await hacerShoutout(canal, raider);
-        shoutoutOk = true;
       } catch (e) {
         console.error('No se pudo hacer el shoutout oficial:', e.message);
       }
-    }
-
-    if (!shoutoutOk) {
-      await decir(canal, `Pasen a seguir a @${raider} en https://twitch.tv/${raider.toLowerCase()} ❤️`);
     }
   } catch (e) {
     console.error('Error en el handler de raids:', e);
@@ -598,7 +592,7 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
-const VERSION = 'v9-2026-11-02';
+const VERSION = 'v10-2026-11-02';
 
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
