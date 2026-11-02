@@ -383,7 +383,7 @@ async function iniciarTrivia(canal) {
   trivia.timer = setTimeout(() => {
     if (est.trivia === trivia) {
       est.trivia = null;
-      decir(canal, `⏰ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: ${trivia.correcta.toUpperCase()} catDespair`);
+      decir(canal, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: ${trivia.correcta.toUpperCase()} catDespair`);
     }
   }, TIEMPO_TRIVIA);
 
