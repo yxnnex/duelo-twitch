@@ -563,27 +563,17 @@ app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
-// Middleware seguro que soporta ambos canales (s2yone y vladsuo)
+// Middleware directo y sin bloqueos innecesarios para evitar Bad Request
 function validarPeticion(req, res, next) {
   const recibida = String(req.query.key || '').trim();
-  if (!API_KEY || recibida !== API_KEY) {
-    console.warn(`[API] 403 en ${req.path}: la key recibida tiene ${recibida.length} caracteres y la esperada ${API_KEY.length}`);
+  
+  if (recibida !== API_KEY) {
     return res.sendStatus(403);
   }
 
-  let canalParam = String(req.query.channel || 's2yone').toLowerCase().replace('#', '').trim();
-  
-  if (!canalParam || canalParam.includes('invalid') || canalParam.includes('$')) {
-    canalParam = 's2yone';
-  }
-
-  if (!CANALES.includes(canalParam)) {
-    console.warn(`[API] 400 en ${req.path}: canal no permitido "${canalParam}"`);
-    return res.sendStatus(400);
-  }
-
-  req.canalNombre = canalParam;       
-  req.canal = `#${canalParam}`;       // Formato correcto con # para tmi.js
+  const canalParam = String(req.query.channel || 's2yone').toLowerCase().replace('#', '').trim();
+  req.canalNombre = canalParam;
+  req.canal = `#${canalParam}`;
   next();
 }
 
