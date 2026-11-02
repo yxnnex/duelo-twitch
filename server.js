@@ -49,7 +49,7 @@ const normalizar = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toL
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Evita que un parámetro externo inyecte comandos de Twitch (/ban, .timeout, etc.) y limpia arrobas o asteriscos extra
+// Evita que un parámetro externo inyecte comandos de Twitch y limpia arrobas o asteriscos extra
 const limpiar = (s, max = 30) =>
   String(s || '').replace(/^[\s/.\\]+/, '').replace(/^@+/, '').slice(0, max).trim();
 
@@ -563,7 +563,7 @@ app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
-// Middleware seguro y tolerante ante variables rotas de Nightbot
+// Middleware seguro que soporta ambos canales (s2yone y vladsuo)
 function validarPeticion(req, res, next) {
   const recibida = String(req.query.key || '').trim();
   if (!API_KEY || recibida !== API_KEY) {
@@ -573,7 +573,6 @@ function validarPeticion(req, res, next) {
 
   let canalParam = String(req.query.channel || 's2yone').toLowerCase().replace('#', '').trim();
   
-  // Si Nightbot envía una variable rota o vacía, caemos por defecto en 's2yone'
   if (!canalParam || canalParam.includes('invalid') || canalParam.includes('$')) {
     canalParam = 's2yone';
   }
@@ -583,8 +582,8 @@ function validarPeticion(req, res, next) {
     return res.sendStatus(400);
   }
 
-  req.canalNombre = canalParam;
-  req.canal = `#${canalParam}`;
+  req.canalNombre = canalParam;       
+  req.canal = `#${canalParam}`;       // Formato correcto con # para tmi.js
   next();
 }
 
@@ -593,11 +592,12 @@ app.get('/duelo', validarPeticion, async (req, res) => {
   const canal = req.canal;
   const est = estadoDe(canal);
 
-  // Respuesta inmediata a Nightbot para evitar timeouts
-  res.send(' ');
-
-  if (est.dueloActivo) return;
+  if (est.dueloActivo) {
+    return res.send(' ');
+  }
+  
   est.dueloActivo = true;
+  res.send(' '); // Respuesta inmediata a Nightbot
 
   try {
     const user = limpiar(req.query.user) || 'Alguien';
@@ -605,6 +605,8 @@ app.get('/duelo', validarPeticion, async (req, res) => {
     if (!touser || touser.includes('$')) touser = 'un rival misterioso';
 
     const ganador = Math.random() < 0.5 ? user : touser;
+
+    console.log(`[DUELO INICIADO] En el canal ${canal} entre ${user} y ${touser}`);
 
     await decir(canal, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash`);
     await esperar(5000);
@@ -620,6 +622,8 @@ app.get('/duelo', validarPeticion, async (req, res) => {
     if (g !== p && nombreValido(g) && nombreValido(p)) {
       await registrarDuelo(canal, g, p);
     }
+  } catch (e) {
+    console.error('Error en ejecución del duelo:', e);
   } finally {
     est.dueloActivo = false;
   }
