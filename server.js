@@ -463,6 +463,41 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
+    // COMANDO DUELO DIRECTO EN EL CHAT
+    if (text.startsWith('!duelo')) {
+      if (est.dueloActivo) return;
+      est.dueloActivo = true;
+
+      try {
+        const user = usuario;
+        const partes = message.split(' ');
+        let touser = partes[1] ? limpiar(partes[1]) : 'un rival misterioso';
+        if (!touser || touser.includes('$')) touser = 'un rival misterioso';
+
+        const ganador = Math.random() < 0.5 ? user : touser;
+
+        await decir(target, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash`);
+        await esperar(5000);
+        await decir(target, 'La pelea está reñida pero ambos saben que solo puede haber un ganador. catDespair');
+        await esperar(5000);
+        await decir(target, 'Se muerden, rasguñan y se pican los ojos el uno al otro catSlap');
+        await esperar(5000);
+        await decir(target, `GANADOR: ${ganador} dancer`);
+
+        const perdedor = ganador === user ? touser : user;
+        const g = ganador.replace('@', '').toLowerCase();
+        const p = perdedor.replace('@', '').toLowerCase();
+        if (g !== p && nombreValido(g) && nombreValido(p)) {
+          await registrarDuelo(target, g, p);
+        }
+      } catch (e) {
+        console.error('Error en ejecución del duelo directo:', e);
+      } finally {
+        est.dueloActivo = false;
+      }
+      return;
+    }
+
     if (esParaKyli(textoNorm) && pideClima(textoNorm)) {
       responderClima(target, usuario, text);
       return;
@@ -563,10 +598,8 @@ app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
-// Middleware directo y sin bloqueos innecesarios para evitar Bad Request
 function validarPeticion(req, res, next) {
   const recibida = String(req.query.key || '').trim();
-  
   if (recibida !== API_KEY) {
     return res.sendStatus(403);
   }
@@ -577,7 +610,7 @@ function validarPeticion(req, res, next) {
   next();
 }
 
-// ---------- DUELO ----------
+// ---------- ENDPOINT DUELO (por si lo usas externamente) ----------
 app.get('/duelo', validarPeticion, async (req, res) => {
   const canal = req.canal;
   const est = estadoDe(canal);
@@ -587,7 +620,7 @@ app.get('/duelo', validarPeticion, async (req, res) => {
   }
   
   est.dueloActivo = true;
-  res.send(' '); // Respuesta inmediata a Nightbot
+  res.send(' ');
 
   try {
     const user = limpiar(req.query.user) || 'Alguien';
@@ -595,8 +628,6 @@ app.get('/duelo', validarPeticion, async (req, res) => {
     if (!touser || touser.includes('$')) touser = 'un rival misterioso';
 
     const ganador = Math.random() < 0.5 ? user : touser;
-
-    console.log(`[DUELO INICIADO] En el canal ${canal} entre ${user} y ${touser}`);
 
     await decir(canal, `${user} ha retado a ${touser} a un duelo a muerte con cuchillos catSmash`);
     await esperar(5000);
