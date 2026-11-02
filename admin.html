@@ -5,14 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Preguntas de trivia</title>
 <style>
-:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-body { max-width: 720px; margin: 0 auto; padding: 16px; }
-textarea, input { width: 100%; box-sizing: border-box; padding: 8px; font: inherit; }
-button { padding: 6px 12px; margin: 6px 6px 6px 0; font: inherit; cursor: pointer; }
+:root {
+  --fondo: #ffffff; --texto: #1a1a1a; --campo: #ffffff; --borde: #c4c8cf;
+  --suave: #5b616b; --boton: #2563eb; --peligro: #c62828; --error: #c62828;
+  font-family: system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #14161a; --texto: #f2f2f2; --campo: #22262d; --borde: #3a3f48;
+    --suave: #aab0ba; --boton: #2563eb; --peligro: #c62828; --error: #ff7b72;
+  }
+}
+body { max-width: 720px; margin: 0 auto; padding: 16px; background: var(--fondo); color: var(--texto); }
+textarea, input { width: 100%; box-sizing: border-box; padding: 8px; font: inherit; background: var(--campo); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; }
+::placeholder { color: var(--suave); opacity: 1; }
+button { padding: 6px 14px; margin: 6px 6px 6px 0; font: inherit; font-weight: 600; cursor: pointer; background: var(--boton); color: #fff; border: 0; border-radius: 6px; }
+button.peligro { background: var(--peligro); }
+button:hover { filter: brightness(1.15); }
+code { background: var(--campo); padding: 1px 5px; border-radius: 4px; }
 ul { padding: 0; list-style: none; }
-li { display: flex; gap: 8px; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #8884; }
+li { display: flex; gap: 8px; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--borde); }
 li span { overflow-wrap: anywhere; }
-#estado { min-height: 1.4em; } .error { color: #d33; }
+#estado { min-height: 1.4em; } .error { color: var(--error); }
 </style>
 </head>
 <body>
@@ -33,7 +47,7 @@ li span { overflow-wrap: anywhere; }
   <h2>Preguntas actuales (<span id="cuenta">0</span>)</h2>
   <p id="aviso"></p>
   <button id="importar">Importar las preguntas incluidas</button>
-  <button id="borrartodas">Borrar todas</button>
+  <button id="borrartodas" class="peligro">Borrar todas</button>
   <ul id="lista"></ul>
 </section>
 
@@ -72,6 +86,7 @@ async function cargar() {
     texto.textContent = p.pregunta + '  →  ' + p.respuestas.join(', ');
     const borrar = document.createElement('button');
     borrar.textContent = 'Borrar';
+    borrar.className = 'peligro';
     borrar.onclick = () => accion(() => api('/admin/preguntas/' + encodeURIComponent(p.id), { method: 'DELETE' }), 'Pregunta borrada');
     li.append(texto, borrar);
     lista.append(li);
