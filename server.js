@@ -1,5 +1,7 @@
 const express = require('express');
 const tmi = require('tmi.js');
+const crypto = require('crypto');
+const path = require('path');
 
 // ==========================================
 // CONFIGURACIÓN (todo lo sensible va por variables de entorno)
@@ -10,6 +12,7 @@ const API_KEY = (process.env.API_KEY || '').trim(); // clave para /duelo y /amor
 const CLIENT_ID = process.env.TWITCH_CLIENT_ID;    // para los shoutouts (API de Twitch)
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;     // para guardar estadísticas de duelos
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || '').trim(); // contraseña del panel /admin
 const PORT = process.env.PORT || 10000;
 const CANALES = ['s2yone', 'vladsuo'];
 
@@ -26,6 +29,10 @@ if (!CLIENT_ID) {
 }
 if (!REDIS_URL || !REDIS_TOKEN) {
   console.warn('⚠️ Sin Upstash: las estadísticas de duelos se guardan en memoria y se pierden al reiniciar.');
+}
+
+if (!ADMIN_PASSWORD) {
+  console.warn('⚠️ Falta ADMIN_PASSWORD: el panel de preguntas (/admin) está desactivado.');
 }
 
 const client = new tmi.Client({
@@ -194,6 +201,94 @@ async function mensajeTopDuelos(canal) {
 }
 
 // ==========================================
+// PREGUNTAS DE TRIVIA EDITABLES (panel /admin)
+// Se guardan en Upstash. Si no hay ninguna propia, se usan las incluidas (BANCO).
+// ==========================================
+const CLAVE_PREGUNTAS = 'trivia:preguntas';
+const preguntasMemoria = new Map();
+let cachePreguntas = null;
+let cacheHasta = 0;
+
+async function leerPreguntas() {
+  let pares = [];
+  if (usaRedis) {
+    const r = await redisCmd('HGETALL', CLAVE_PREGUNTAS);
+    if (Array.isArray(r)) {
+      for (let i = 0; i < r.length; i += 2) pares.push([r[i], r[i + 1]]);
+    } else if (r) {
+      pares = Object.entries(r);
+    }
+  } else {
+    pares = [...preguntasMemoria];
+  }
+  const lista = [];
+  for (const [id, json] of pares) {
+    try {
+      const q = JSON.parse(json);
+      if (q && q.pregunta && Array.isArray(q.respuestas) && q.respuestas.length) {
+        lista.push({ id, pregunta: q.pregunta, respuestas: q.respuestas });
+      }
+    } catch (e) { /* se ignora una entrada dañada */ }
+  }
+  return lista.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+async function agregarPreguntas(lista) {
+  const campos = lista.map((q) => [
+    `${Date.now().toString(36).padStart(9, '0')}${Math.random().toString(36).slice(2, 6)}`,
+    JSON.stringify({ pregunta: q.pregunta, respuestas: q.respuestas })
+  ]);
+  if (!campos.length) return;
+  if (usaRedis) await redisCmd('HSET', CLAVE_PREGUNTAS, ...campos.flat());
+  else campos.forEach(([id, json]) => preguntasMemoria.set(id, json));
+  cachePreguntas = null;
+}
+
+async function borrarPregunta(id) {
+  if (usaRedis) await redisCmd('HDEL', CLAVE_PREGUNTAS, id);
+  else preguntasMemoria.delete(id);
+  cachePreguntas = null;
+}
+
+async function borrarTodasLasPreguntas() {
+  if (usaRedis) await redisCmd('DEL', CLAVE_PREGUNTAS);
+  else preguntasMemoria.clear();
+  cachePreguntas = null;
+}
+
+// Preguntas que usa el bot: las propias si existen, si no las incluidas
+async function bancoActivo() {
+  if (cachePreguntas && Date.now() < cacheHasta) return cachePreguntas;
+  try {
+    const propias = await leerPreguntas();
+    cachePreguntas = propias.length ? propias : BANCO;
+    cacheHasta = Date.now() + 30 * 1000;
+    return cachePreguntas;
+  } catch (e) {
+    console.error('Error leyendo preguntas:', e.message);
+    return BANCO;
+  }
+}
+
+// Formato por línea: pregunta | respuesta1, respuesta2
+function parsearLineas(texto) {
+  const validas = [];
+  const errores = [];
+  String(texto || '').split(/\r?\n/).forEach((linea, i) => {
+    if (!linea.trim()) return;
+    const [preg, resp] = linea.split('|');
+    const pregunta = (preg || '').trim();
+    const respuestas = (resp || '').split(',').map((r) => r.trim()).filter(Boolean);
+    if (!pregunta || pregunta.length > 300 || !respuestas.length || respuestas.length > 10 || respuestas.some((r) => r.length > 60)) {
+      errores.push(i + 1);
+    } else {
+      validas.push({ pregunta, respuestas });
+    }
+  });
+  return { validas, errores };
+}
+
+// ==========================================
 // ESTADO POR CANAL
 // ==========================================
 const estados = new Map();
@@ -261,21 +356,22 @@ const BANCO = [
 
 const TIEMPO_TRIVIA = 30 * 1000;
 
-function iniciarTrivia(canal) {
+async function iniciarTrivia(canal) {
   const est = estadoDe(canal);
+  const banco = await bancoActivo();
 
   if (est.trivia) {
     decir(canal, '⚠️ ¡Ya hay una trivia activa en el chat! Respondan rápido catSmash');
     return;
   }
 
-  if (est.usadas.length >= BANCO.length) est.usadas = [];
-
-  const disponibles = BANCO.map((_, i) => i).filter((i) => !est.usadas.includes(i));
-  const idx = disponibles[Math.floor(Math.random() * disponibles.length)];
-  est.usadas.push(idx);
-
-  const p = BANCO[idx];
+  let disponibles = banco.filter((q) => !est.usadas.includes(q.pregunta));
+  if (!disponibles.length) {
+    est.usadas = [];
+    disponibles = banco;
+  }
+  const p = disponibles[Math.floor(Math.random() * disponibles.length)];
+  est.usadas.push(p.pregunta);
   const trivia = {
     patrones: p.respuestas.map(
       (r) => new RegExp(`(?<![a-z0-9])${escapeRegex(normalizar(r))}(?![a-z0-9])`)
@@ -458,7 +554,7 @@ client.on('message', async (target, context, message, self) => {
     if (revisarRespuesta(target, textoNorm, usuario)) return;
 
     if (text === '!trivia') {
-      iniciarTrivia(target);
+      await iniciarTrivia(target);
       return;
     }
 
@@ -592,7 +688,7 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
-const VERSION = 'v10-2026-11-02';
+const VERSION = 'v11-2026-11-02';
 
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
@@ -686,5 +782,75 @@ app.get('/amor', validarPeticion, async (req, res) => {
     decir(canal, `La compatibilidad de amor entre ${user} y ${touser} es del ${porcentaje}% BearHug`);
   }
 });
+
+// ==========================================
+// PANEL DE PREGUNTAS DE TRIVIA (/admin)
+// ==========================================
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '100kb' }));
+
+const fallosAdmin = new Map(); // ip -> { n, hasta }
+
+function validarAdmin(req, res, next) {
+  if (!ADMIN_PASSWORD) return res.status(503).json({ error: 'Falta ADMIN_PASSWORD en Render' });
+
+  const reg = fallosAdmin.get(req.ip);
+  if (reg && reg.n >= 10 && Date.now() < reg.hasta) {
+    return res.status(429).json({ error: 'Demasiados intentos, esperá 15 minutos' });
+  }
+
+  const dada = Buffer.from(String(req.get('x-admin-key') || ''));
+  const real = Buffer.from(ADMIN_PASSWORD);
+  if (dada.length !== real.length || !crypto.timingSafeEqual(dada, real)) {
+    const vigente = reg && Date.now() < reg.hasta ? reg.n : 0;
+    fallosAdmin.set(req.ip, { n: vigente + 1, hasta: Date.now() + 15 * 60 * 1000 });
+    return res.status(401).json({ error: 'Contraseña incorrecta' });
+  }
+
+  fallosAdmin.delete(req.ip);
+  next();
+}
+
+const conError = (fn) => async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (e) {
+    console.error('Error en /admin:', e.message);
+    res.status(500).json({ error: 'No se pudo completar la operación' });
+  }
+};
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'), (err) => {
+    if (err) res.status(404).send('Falta el archivo admin.html en el repositorio.');
+  });
+});
+
+app.get('/admin/preguntas', validarAdmin, conError(async (req, res) => {
+  res.json({ preguntas: await leerPreguntas(), persistente: usaRedis });
+}));
+
+app.post('/admin/preguntas', validarAdmin, conError(async (req, res) => {
+  const { validas, errores } = parsearLineas(req.body && req.body.lineas);
+  await agregarPreguntas(validas);
+  res.json({ agregadas: validas.length, errores });
+}));
+
+app.delete('/admin/preguntas/:id', validarAdmin, conError(async (req, res) => {
+  await borrarPregunta(req.params.id);
+  res.json({ ok: true });
+}));
+
+app.delete('/admin/preguntas', validarAdmin, conError(async (req, res) => {
+  await borrarTodasLasPreguntas();
+  res.json({ ok: true });
+}));
+
+app.post('/admin/importar', validarAdmin, conError(async (req, res) => {
+  const existentes = new Set((await leerPreguntas()).map((q) => q.pregunta));
+  const nuevas = BANCO.filter((q) => !existentes.has(q.pregunta));
+  await agregarPreguntas(nuevas);
+  res.json({ agregadas: nuevas.length, errores: [] });
+}));
 
 app.listen(PORT, () => console.log(`Servidor escuchando en el puerto ${PORT} (${VERSION})`));
