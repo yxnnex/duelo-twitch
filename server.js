@@ -187,7 +187,6 @@ async function mensajeTopDuelos(canal) {
     if (!gana.length && !pierde.length) {
       return ['Todavía no hay duelos registrados. ¡Usen !duelo para empezar! catSmash'];
     }
-    // Sin emojis de medalla: algunos clientes del chat los muestran como texto (":first_place:")
     const formatear = (lista) =>
       lista.length ? lista.map(([u, n], i) => `${i + 1}° ${u} (${n})`).join(' | ') : 'sin datos';
     return [
@@ -202,7 +201,6 @@ async function mensajeTopDuelos(canal) {
 
 // ==========================================
 // PREGUNTAS DE TRIVIA EDITABLES (panel /admin)
-// Se guardan en Upstash. Si no hay ninguna propia, se usan las incluidas (BANCO).
 // ==========================================
 const CLAVE_PREGUNTAS = 'trivia:preguntas';
 const preguntasMemoria = new Map();
@@ -256,7 +254,6 @@ async function borrarTodasLasPreguntas() {
   cachePreguntas = null;
 }
 
-// Preguntas que usa el bot: las propias si existen, si no las incluidas
 async function bancoActivo() {
   if (cachePreguntas && Date.now() < cacheHasta) return cachePreguntas;
   try {
@@ -270,7 +267,6 @@ async function bancoActivo() {
   }
 }
 
-// Formato por línea: pregunta | respuesta1, respuesta2
 function parsearLineas(texto) {
   const validas = [];
   const errores = [];
@@ -298,7 +294,6 @@ function estadoDe(canal) {
     estados.set(canal, {
       trivia: null,
       usadas: [],
-      advertidos: new Map(),
       dueloActivo: false
     });
   }
@@ -383,7 +378,7 @@ async function iniciarTrivia(canal) {
   trivia.timer = setTimeout(() => {
     if (est.trivia === trivia) {
       est.trivia = null;
-      decir(canal, ` ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: ${trivia.correcta.toUpperCase()} catDespair`);
+      decir(canal, `⏰ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: ${trivia.correcta.toUpperCase()} catDespair`);
     }
   }, TIEMPO_TRIVIA);
 
@@ -486,14 +481,6 @@ async function responderClima(canal, usuario, texto) {
 }
 
 // ==========================================
-// USUARIOS CON FLUJO ESPECIAL
-// ==========================================
-const USUARIOS_ADVERTIDOS = {
-  elianhdc: { aviso: 'Uuh aparecio mi hater Nro 1, felicidades.' },
-  tomadaa: { aviso: 'Uuh llego el hijo de puta mi fan nro 2, siempre segundo.' }
-};
-
-// ==========================================
 // SALUDOS
 // ==========================================
 const usuariosSaludados = new Map();
@@ -536,18 +523,6 @@ client.on('message', async (target, context, message, self) => {
 
     if (usernameLower === 's2yone' && text.includes('chau bb')) {
       decir(target, `@${usuario} adios, buenas noches eres lo mejor tkm (eso deberia decirte @vladsuo)`);
-      return;
-    }
-
-    if (USUARIOS_ADVERTIDOS[usernameLower]) {
-      const nivel = est.advertidos.get(usernameLower) || 0;
-      if (nivel === 0) {
-        est.advertidos.set(usernameLower, 1);
-        decir(target, USUARIOS_ADVERTIDOS[usernameLower].aviso);
-      } else if (nivel === 1) {
-        est.advertidos.set(usernameLower, 2);
-        decir(target, `@${usuario} vos empezaste`);
-      }
       return;
     }
 
@@ -670,7 +645,6 @@ client.on('raided', async (canal, raider, viewers) => {
 
     await decir(canal, `¡Gracias por el raid @${raider}! Bienvenidos todos dancer`);
 
-    // Shoutout oficial de Twitch. Si falla (bot sin mod, canal offline, cooldown), no se manda nada más.
     if (CLIENT_ID) {
       try {
         await hacerShoutout(canal, raider);
@@ -694,7 +668,6 @@ app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
 });
 
-// Sirve para comprobar qué versión del código está corriendo en Render
 app.get('/version', (req, res) => {
   res.status(200).send(`S2kyli Bot ${VERSION}`);
 });
@@ -702,12 +675,10 @@ app.get('/version', (req, res) => {
 function validarPeticion(req, res, next) {
   const recibida = String(req.query.key || '').trim();
   if (!API_KEY || recibida !== API_KEY) {
-    // Solo se muestran los largos (nunca las claves) para detectar espacios o letras de más
     console.warn(`[API] 403 en ${req.path}: la key recibida tiene ${recibida.length} caracteres y la esperada ${API_KEY.length}`);
     return res.sendStatus(403);
   }
 
-  // Solo letras, números y guion bajo; y únicamente los canales donde está el bot
   const canal = String(req.query.channel || 's2yone').toLowerCase().replace(/[^a-z0-9_]/g, '');
   if (!CANALES.includes(canal)) {
     console.warn(`[API] 400 en ${req.path}: canal no permitido, llegó ${JSON.stringify(req.query.channel)}`);
@@ -789,7 +760,7 @@ app.get('/amor', validarPeticion, async (req, res) => {
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '100kb' }));
 
-const fallosAdmin = new Map(); // ip -> { n, hasta }
+const fallosAdmin = new Map();
 
 function validarAdmin(req, res, next) {
   if (!ADMIN_PASSWORD) return res.status(503).json({ error: 'Falta ADMIN_PASSWORD en Render' });
