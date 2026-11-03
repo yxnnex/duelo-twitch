@@ -14,7 +14,7 @@ const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;     // para guardar estad�
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || '').trim(); // contraseña del panel /admin
 const PORT = process.env.PORT || 10000;
-const CANALES = ['s2yone', 'vladsuo'];
+const CANALES = ['s2yone', 'vladsuo'].map((c) => c.replace(/^#/, '').toLowerCase());
 
 if (!OAUTH_TOKEN) {
   console.error('❌ Falta la variable de entorno TWITCH_OAUTH');
@@ -312,7 +312,8 @@ if (!CLIENT_ID) {
 }
 
 async function canalEnVivo(canal) {
-  const data = await helix(`/streams?user_login=${encodeURIComponent(canal)}`);
+  const login = canal.replace(/^#/, '').toLowerCase();
+  const data = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
   return Boolean(data && data.data && data.data.length);
 }
 
@@ -321,20 +322,25 @@ async function mensajesAutomaticos() {
 
   for (const canal of CANALES) {
     try {
-      if (!(await canalEnVivo(canal))) continue; // canal offline: no se dice nada
+      if (!(await canalEnVivo(canal))) {
+        console.log(`[AUTO] ${canal}: offline, no se envía nada`);
+        continue;
+      }
 
       // Filtra para no repetir el último mensaje enviado en ese canal
       const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoAuto.get(canal));
       const elegido = opciones[Math.floor(Math.random() * opciones.length)];
       ultimoAuto.set(canal, elegido);
       await decir(`#${canal}`, elegido);
+      console.log(`[AUTO] ${canal}: en vivo, se envió "${elegido}"`);
     } catch (e) {
-      console.error(`No pude revisar si ${canal} está en vivo:`, e.message);
+      console.error(`[AUTO] No pude revisar si ${canal} está en vivo:`, e.message);
     }
   }
 }
 
 setInterval(mensajesAutomaticos, INTERVALO_AUTO);
+console.log(`[AUTO] Mensajes automáticos cada ${INTERVALO_AUTO / 60000} minutos (solo con el canal en vivo)`);
 
 // ==========================================
 // BANCO DE TRIVIA
@@ -694,7 +700,7 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
-const VERSION = 'v13-2026-11-02';
+const VERSION = 'v15-2026-11-03';
 
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
