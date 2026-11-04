@@ -301,51 +301,46 @@ function estadoDe(canal) {
 }
 
 // ==========================================
-// MENSAJES AUTOMÁTICOS CADA 20 MINUTOS (ROBUSTO)
+// MENSAJES AUTOMÁTICOS CADA 20 MINUTOS
 // ==========================================
 const MENSAJES_AUTO = ['CatCozy', 'Erm', 'holasinofender', 'aaa'];
 const INTERVALO_AUTO = 20 * 60 * 1000; // 20 minutos
 const ultimoAuto = new Map(); // canal -> último mensaje enviado
 
+if (!CLIENT_ID) {
+  console.warn('⚠️ Sin TWITCH_CLIENT_ID no se puede saber si el canal está en vivo: los mensajes automáticos están desactivados.');
+}
+
 async function canalEnVivo(canal) {
-  try {
-    const login = canal.replace(/^#/, '').toLowerCase();
-    if (!CLIENT_ID) return true; // Si no hay CLIENT_ID configurado, permite el envío por defecto
-    const data = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
-    return Boolean(data && data.data && data.data.length);
-  } catch (e) {
-    console.error(`[AUTO] Error consultando estado de ${canal}:`, e.message);
-    return true; // Ante un fallo temporal de la API, igual permite enviar para no bloquear
-  }
+  const login = canal.replace(/^#/, '').toLowerCase();
+  const data = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
+  return Boolean(data && data.data && data.data.length);
 }
 
 async function mensajesAutomaticos() {
-  for (const canalRaw of CANALES) {
-    const canalLimpio = canalRaw.replace(/^#/, '').toLowerCase();
-    const canalChat = `#${canalLimpio}`;
+  if (!CLIENT_ID) return;
 
+  for (const canal of CANALES) {
     try {
-      const enVivo = await canalEnVivo(canalLimpio);
-      if (!enVivo) {
-        console.log(`[AUTO] ${canalChat}: offline, no se envía nada`);
+      if (!(await canalEnVivo(canal))) {
+        console.log(`[AUTO] ${canal}: offline, no se envía nada`);
         continue;
       }
 
       // Filtra para no repetir el último mensaje enviado en ese canal
-      const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoAuto.get(canalChat));
+      const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoAuto.get(canal));
       const elegido = opciones[Math.floor(Math.random() * opciones.length)];
-      
-      ultimoAuto.set(canalChat, elegido);
-      await decir(canalChat, elegido);
-      console.log(`[AUTO] ${canalChat}: en vivo, se envió "${elegido}"`);
+      ultimoAuto.set(canal, elegido);
+      await decir(`#${canal}`, elegido);
+      console.log(`[AUTO] ${canal}: en vivo, se envió "${elegido}"`);
     } catch (e) {
-      console.error(`[AUTO] Error en loop automático para ${canalChat}:`, e.message);
+      console.error(`[AUTO] No pude revisar si ${canal} está en vivo:`, e.message);
     }
   }
 }
 
 setInterval(mensajesAutomaticos, INTERVALO_AUTO);
-console.log(`[AUTO] Mensajes automáticos configurados cada ${INTERVALO_AUTO / 60000} minutos`);
+console.log(`[AUTO] Mensajes automáticos cada ${INTERVALO_AUTO / 60000} minutos (solo con el canal en vivo)`);
 
 // ==========================================
 // BANCO DE TRIVIA
@@ -552,6 +547,81 @@ const RESPUESTAS_SALUDO = (u) => [
 ];
 
 // ==========================================
+// PREGUNTAS A @s2kyli (responde con Wikipedia en español)
+// Ejemplos: "@s2kyli quién es Lionel Messi", "@s2kyli qué es un agujero negro"
+// ==========================================
+const COOLDOWN_PREGUNTA = 30 * 1000; // por usuario y canal
+const ultimaPregunta = new Map();
+const CONSULTAS_VACIAS = new Set(['eso', 'esto', 'aquello', 'ese', 'esa', 'este', 'esta', 'nada', 'algo', 'tu', 'vos', 'el mejor', 'la mejor']);
+
+// Solo preguntas del tipo "quién/qué/cuál es X", "cuándo fue X", "dónde queda X"
+function extraerPregunta(textoNorm) {
+  const limpio = textoNorm
+    .replace(/@?(s2kylian|s2kyli|kyli)/g, ' ')
+    .replace(/[¿?¡!,.:;"]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const m = limpio.match(
+    /^(?:quien(?:es)?|que|cual(?:es)?|cuando|donde)\s+(?:es|son|era|eran|fue|fueron|significa|queda|esta|nacio|murio)\s+(?:el |la |los |las |un |una |lo )?(.+)$/
+  );
+  if (!m) return null;
+
+  const consulta = m[1].trim();
+  if (consulta.length < 2 || consulta.length > 60 || CONSULTAS_VACIAS.has(consulta)) return null;
+  return consulta;
+}
+
+// Deja el extracto corto y limpio para el chat
+function recortarExtracto(texto, max = 280) {
+  let t = String(texto || '')
+    .replace(/\s*\([^)]*\)/g, '')   // quita paréntesis (fechas, pronunciaciones)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (t.length <= max) return t;
+
+  const corte = t.lastIndexOf('. ', max);
+  return corte > 80 ? t.slice(0, corte + 1) : t.slice(0, max - 3).trimEnd() + '...';
+}
+
+async function buscarEnWikipedia(consulta) {
+  const url = 'https://es.wikipedia.org/w/api.php?action=query&generator=search&gsrnamespace=0&gsrlimit=1'
+    + `&gsrsearch=${encodeURIComponent(consulta)}`
+    + '&prop=extracts&exintro=1&explaintext=1&exsentences=2&redirects=1&format=json&formatversion=2';
+
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'S2kyliBot/1.0 (bot de chat de Twitch)' },
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const data = await res.json();
+  const pagina = data.query && data.query.pages && data.query.pages[0];
+  const extracto = pagina && pagina.extract ? pagina.extract.trim() : '';
+
+  // Páginas de desambiguación ("X puede referirse a...") no sirven como respuesta
+  if (!extracto || /puede referirse a|pueden referirse a/i.test(extracto)) return null;
+  return recortarExtracto(extracto);
+}
+
+async function responderPregunta(canal, usuario, usuarioLower, consulta) {
+  const clave = `${canal}:${usuarioLower}`;
+  const ahora = Date.now();
+  if (ahora - (ultimaPregunta.get(clave) || 0) < COOLDOWN_PREGUNTA) return;
+  ultimaPregunta.set(clave, ahora);
+  if (ultimaPregunta.size > 1000) ultimaPregunta.clear();
+
+  try {
+    const respuesta = await buscarEnWikipedia(consulta);
+    if (respuesta) decir(canal, `@${usuario} ${respuesta}`);
+    else decir(canal, `@${usuario} no encontré nada claro de eso catDespair`);
+  } catch (e) {
+    console.error('Error buscando en Wikipedia:', e.message);
+    decir(canal, `@${usuario} no pude buscar eso ahora mismo catDespair`);
+  }
+}
+
+// ==========================================
 // DETECTOR DE MENSAJES
 // ==========================================
 client.on('message', async (target, context, message, self) => {
@@ -623,6 +693,15 @@ client.on('message', async (target, context, message, self) => {
     if (esParaKyli(textoNorm) && pideClima(textoNorm)) {
       responderClima(target, usuario, text);
       return;
+    }
+
+    // Preguntas dirigidas al bot (Wikipedia)
+    if (esParaKyli(textoNorm)) {
+      const consulta = extraerPregunta(textoNorm);
+      if (consulta) {
+        await responderPregunta(target, usuario, usernameLower, consulta);
+        return;
+      }
     }
 
 
