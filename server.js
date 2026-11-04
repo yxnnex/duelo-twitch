@@ -200,6 +200,27 @@ async function mensajeTopDuelos(canal) {
 }
 
 // ==========================================
+// ACIERTOS DE TRIVIA (comando !wintrivia)
+// ==========================================
+function registrarAcierto(canal, usuarioLower) {
+  // Sin await a propósito: no demora el mensaje de "¡Correcto!" y los errores se anotan acá
+  sumar(`trivia:${canal.replace('#', '')}:aciertos`, usuarioLower).catch((e) => {
+    console.error('Error guardando el acierto de trivia:', e.message);
+  });
+}
+
+async function mensajeTopTrivia(canal) {
+  try {
+    const top = await top3(`trivia:${canal.replace('#', '')}:aciertos`);
+    if (!top.length) return 'Todavía nadie acertó una trivia. ¡Escriban !trivia para empezar! dancer';
+    return `TOP TRIVIA: ${top.map(([u, n], i) => `${i + 1}° ${u} (${n})`).join(' | ')}`;
+  } catch (e) {
+    console.error('Error leyendo aciertos de trivia:', e.message);
+    return 'No pude leer los aciertos de trivia ahora mismo catDespair';
+  }
+}
+
+// ==========================================
 // PREGUNTAS DE TRIVIA EDITABLES (panel /admin)
 // ==========================================
 const CLAVE_PREGUNTAS = 'trivia:preguntas';
@@ -289,10 +310,18 @@ function parsearLineas(texto) {
 // ==========================================
 const estados = new Map();
 
+// Pueden pausar/reanudar la trivia: s2yone (en cualquier canal), el streamer del canal y los mods
+function puedeAdministrar(context, usernameLower) {
+  return usernameLower === 's2yone'
+    || context.mod === true
+    || Boolean(context.badges && context.badges.broadcaster === '1');
+}
+
 function estadoDe(canal) {
   if (!estados.has(canal)) {
     estados.set(canal, {
       trivia: null,
+      triviaPausada: false,
       usadas: [],
       dueloActivo: false
     });
@@ -420,7 +449,7 @@ async function iniciarTrivia(canal) {
   trivia.timer = setTimeout(() => {
     if (est.trivia === trivia) {
       est.trivia = null;
-      decir(canal, `⏰ ¡Se acabó el tiempo! Nadie la adivinó. La respuesta correcta era: ${trivia.correcta.toUpperCase()} catDespair`);
+      decir(canal, '⏰ ¡Se acabó el tiempo! Nadie la adivinó catDespair');
     }
   }, TIEMPO_TRIVIA);
 
@@ -428,7 +457,7 @@ async function iniciarTrivia(canal) {
   decir(canal, `🧠 [TRIVIA]: ${p.pregunta} ⏱️ ¡Tienen 30 segundos!`);
 }
 
-function revisarRespuesta(canal, textoNorm, usuario) {
+function revisarRespuesta(canal, textoNorm, usuario, usuarioLower) {
   const est = estadoDe(canal);
   if (!est.trivia) return false;
 
@@ -436,6 +465,7 @@ function revisarRespuesta(canal, textoNorm, usuario) {
     clearTimeout(est.trivia.timer);
     est.trivia = null;
     decir(canal, `¡Correcto @${usuario}! Acertaste la respuesta dancer`);
+    registrarAcierto(canal, usuarioLower);
     return true;
   }
   return false;
@@ -643,10 +673,37 @@ client.on('message', async (target, context, message, self) => {
       return;
     }
 
-    if (revisarRespuesta(target, textoNorm, usuario)) return;
+    if (revisarRespuesta(target, textoNorm, usuario, usernameLower)) return;
+
+    // Pausar y reanudar la trivia del canal (solo s2yone, el streamer o mods)
+    if (text === '!pausatrivia' || text === '!reanudartrivia') {
+      if (!puedeAdministrar(context, usernameLower)) return;
+
+      if (text === '!pausatrivia') {
+        if (est.triviaPausada) return;
+        est.triviaPausada = true;
+        if (est.trivia) {              // si había una pregunta en curso, se cancela sin avisar la respuesta
+          clearTimeout(est.trivia.timer);
+          est.trivia = null;
+        }
+        decir(target, 'Trivia en pausa. s2yone o un mod la reactiva con !reanudartrivia');
+      } else {
+        if (!est.triviaPausada) return;
+        est.triviaPausada = false;
+        decir(target, '¡Trivia reactivada! Escriban !trivia dancer');
+      }
+      return;
+    }
 
     if (text === '!trivia') {
+      if (est.triviaPausada) return;   // en pausa: se ignora sin responder para no llenar el chat
       await iniciarTrivia(target);
+      return;
+    }
+
+    // Top 3 de aciertos en la trivia (de este canal)
+    if (text === '!wintrivia') {
+      decir(target, await mensajeTopTrivia(target));
       return;
     }
 
@@ -784,7 +841,7 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
-const VERSION = 'v16-2026-11-03';
+const VERSION = 'v19-2026-11-03';
 
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
