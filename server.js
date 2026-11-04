@@ -330,46 +330,58 @@ function estadoDe(canal) {
 }
 
 // ==========================================
-// MENSAJES AUTOMÁTICOS CADA 20 MINUTOS
+// MENSAJES AUTOMÁTICOS CADA 20 MINUTOS (versión que funcionó, integrada)
+// Solo se envían si el canal está en vivo. Si NO se puede consultar a Twitch
+// (falta TWITCH_CLIENT_ID o la API falla), se envían igual para no quedarse mudo.
 // ==========================================
 const MENSAJES_AUTO = ['CatCozy', 'Erm', 'holasinofender', 'aaa'];
 const INTERVALO_AUTO = 20 * 60 * 1000; // 20 minutos
 const ultimoAuto = new Map(); // canal -> último mensaje enviado
 
 if (!CLIENT_ID) {
-  console.warn('⚠️ Sin TWITCH_CLIENT_ID no se puede saber si el canal está en vivo: los mensajes automáticos están desactivados.');
+  console.warn('⚠️ Sin TWITCH_CLIENT_ID los mensajes automáticos se envían SIN verificar si el canal está en vivo.');
 }
 
 async function canalEnVivo(canal) {
-  const login = canal.replace(/^#/, '').toLowerCase();
-  const data = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
-  return Boolean(data && data.data && data.data.length);
+  try {
+    const login = canal.replace(/^#/, '').toLowerCase();
+    if (!CLIENT_ID) return true; // sin CLIENT_ID no se puede consultar: se permite el envío
+    const data = await helix(`/streams?user_login=${encodeURIComponent(login)}`);
+    return Boolean(data && data.data && data.data.length);
+  } catch (e) {
+    // Si ves esta línea en los Logs, el chequeo "en vivo" NO está funcionando (por ejemplo, token vencido)
+    console.error(`[AUTO] Error consultando estado de ${canal} (se envía igual):`, e.message);
+    return true;
+  }
 }
 
 async function mensajesAutomaticos() {
-  if (!CLIENT_ID) return;
+  for (const canalRaw of CANALES) {
+    const canalLimpio = canalRaw.replace(/^#/, '').toLowerCase();
+    const canalChat = `#${canalLimpio}`;
 
-  for (const canal of CANALES) {
     try {
-      if (!(await canalEnVivo(canal))) {
-        console.log(`[AUTO] ${canal}: offline, no se envía nada`);
+      const enVivo = await canalEnVivo(canalLimpio);
+      if (!enVivo) {
+        console.log(`[AUTO] ${canalChat}: offline, no se envía nada`);
         continue;
       }
 
       // Filtra para no repetir el último mensaje enviado en ese canal
-      const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoAuto.get(canal));
+      const opciones = MENSAJES_AUTO.filter((m) => m !== ultimoAuto.get(canalChat));
       const elegido = opciones[Math.floor(Math.random() * opciones.length)];
-      ultimoAuto.set(canal, elegido);
-      await decir(`#${canal}`, elegido);
-      console.log(`[AUTO] ${canal}: en vivo, se envió "${elegido}"`);
+
+      ultimoAuto.set(canalChat, elegido);
+      await decir(canalChat, elegido);
+      console.log(`[AUTO] ${canalChat}: en vivo, se envió "${elegido}"`);
     } catch (e) {
-      console.error(`[AUTO] No pude revisar si ${canal} está en vivo:`, e.message);
+      console.error(`[AUTO] Error en el ciclo automático para ${canalChat}:`, e.message);
     }
   }
 }
 
 setInterval(mensajesAutomaticos, INTERVALO_AUTO);
-console.log(`[AUTO] Mensajes automáticos cada ${INTERVALO_AUTO / 60000} minutos (solo con el canal en vivo)`);
+console.log(`[AUTO] Mensajes automáticos configurados cada ${INTERVALO_AUTO / 60000} minutos`);
 
 // ==========================================
 // BANCO DE TRIVIA
@@ -675,6 +687,14 @@ client.on('message', async (target, context, message, self) => {
 
     if (revisarRespuesta(target, textoNorm, usuario, usernameLower)) return;
 
+    // Prueba manual de los mensajes automáticos (sin esperar los 20 minutos). Mira los Logs: líneas [AUTO]
+    if (text === '!probarauto') {
+      if (!puedeAdministrar(context, usernameLower)) return;
+      console.log(`[AUTO] Prueba manual pedida por ${usuario} en ${target}`);
+      await mensajesAutomaticos();
+      return;
+    }
+
     // Pausar y reanudar la trivia del canal (solo s2yone, el streamer o mods)
     if (text === '!pausatrivia' || text === '!reanudartrivia') {
       if (!puedeAdministrar(context, usernameLower)) return;
@@ -841,7 +861,7 @@ client.on('raided', async (canal, raider, viewers) => {
 // ==========================================
 const app = express();
 
-const VERSION = 'v19-2026-11-03';
+const VERSION = 'v21-2026-11-04';
 
 app.get('/', (req, res) => {
   res.status(200).send('S2kyli Bot está activo 24/7 🚀');
